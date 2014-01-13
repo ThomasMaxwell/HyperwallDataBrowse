@@ -7,12 +7,120 @@ Created on Jan 13, 2014
 from PyQt4 import QtCore, QtGui
 import sys
 
+class LabeledSliderWidget( QtGui.QWidget ):
+    
+    def __init__(self, index, label, **args ):  
+        super( LabeledSliderWidget, self ).__init__()
+        top_level_layout = QtGui.QVBoxLayout() 
+        self.setLayout(top_level_layout)
+        slider_layout = QtGui.QHBoxLayout()
+        top_level_layout.addLayout(slider_layout)
+        self.cparm = args.get( 'cparm', None )
+        self.maxValue =  1000 
+        self.minValue =  0 
+        self.tickInterval = 100
+        self.scaledMaxValue = args.get( 'max_value', 1.0 )
+        self.scaledMinValue = args.get( 'min_value', 0.0 )
+        self.scaledInitValue = args.get( 'init_value', ( self.scaledMaxValue - self.scaledMinValue )/2.0 )
+        self.useScaledValue = True
+        self.slider_index = index
+        self.title = label
+        slider_layout.setMargin(2)
+        label_font = QtGui.QFont( "Arial", 16, QtGui.QFont.Bold)
+        slider_label = QtGui.QLabel( label  )
+        slider_label.setFixedWidth( 80 )
+        slider_label.setFont( label_font )
+        slider_layout.addWidget( slider_label  ) 
+        
+        self.slider = QtGui.QSlider( QtCore.Qt.Horizontal )
+        self.slider.setRange( int(self.minValue), int(self.maxValue) ) 
+        self.slider.setTickPosition( QtGui.QSlider.TicksBelow )
+        self.slider.setTickInterval ( self.tickInterval )
+        fvalue = ( self.scaledInitValue - self.scaledMinValue ) / float( self.scaledMaxValue - self.scaledMinValue )
+        self.initValue = int( round( self.minValue + fvalue * ( self.maxValue - self.minValue ) ) )
+        self.slider.setValue( int( self.initValue ) )
+        self.connect( self.slider, QtCore.SIGNAL('sliderMoved(int)'), self.sliderMoved )
+        self.connect( self.slider, QtCore.SIGNAL('sliderPressed()'), self.configStart )
+        self.connect( self.slider, QtCore.SIGNAL('sliderReleased()'), self.configEnd )
+        slider_label.setBuddy( self.slider )
+        
+        tick_label_font = QtGui.QFont( "Arial", 10, QtGui.QFont.Bold)
+        slider_container = QtGui.QVBoxLayout() 
+        slider_container.addWidget( self.slider  )
+        tick_label_layout = QtGui.QHBoxLayout() 
+        slider_container.addLayout(tick_label_layout)        
+        min_value_label = QtGui.QLabel( "%.2f" % self.scaledMinValue  )
+        min_value_label.setFont(tick_label_font)
+        tick_label_layout.addWidget( min_value_label  ) 
+        tick_label_layout.addStretch()
+        max_value_label = QtGui.QLabel( "%.2f" % self.scaledMaxValue  )
+        max_value_label.setFont(tick_label_font)
+        tick_label_layout.addWidget( max_value_label  ) 
+        
+        slider_layout.addSpacing ( 20 )
+        slider_layout.addLayout( slider_container  )
+        slider_layout.addSpacing( 20 )
+         
+        self.value_pane = QtGui.QLabel( "%6.2f" % self.getSliderValue()  )   
+        self.value_pane.setFrameStyle( QtGui.QFrame.StyledPanel | QtGui.QFrame.Raised   )     
+        self.value_pane.setLineWidth( 2 )
+        self.value_pane.setFixedWidth( 60 )
+        self.value_pane.setFixedHeight( 25 )
+        self.value_pane.setStyleSheet("QLabel { background-color : white; color : black; }");
+        slider_layout.addWidget( self.value_pane  ) 
+        
+        
+    def getTitle(self):
+        return self.title
+        
+    def setSliderValue( self, normailzed_slider_value ): 
+        index_value = int( round( self.minValue + normailzed_slider_value * ( self.maxValue - self.minValue ) ) )
+        scaled_slider_value = self.scaledMinValue + normailzed_slider_value * ( self.scaledMaxValue - self.scaledMinValue )
+        self.value_pane.setText( str( scaled_slider_value ) )
+        self.slider.setValue( index_value )      
+
+    def getSliderValue( self, slider_value = None ):
+        slider_value = self.slider.value() if not slider_value else slider_value
+        fvalue = ( slider_value - self.minValue ) / float( self.maxValue - self.minValue ) 
+        return self.scaledMinValue + fvalue * ( self.scaledMaxValue - self.scaledMinValue )
+
+    def sliderMoved( self, raw_slider_value ):
+        scaled_slider_value = self.getSliderValue( raw_slider_value )
+        self.value_pane.setText( str( scaled_slider_value ) )
+        self.emit( QtCore.SIGNAL('ConfigCmd'), 'Moved', self.slider_index, ( raw_slider_value, scaled_slider_value ) )
+        return scaled_slider_value
+    
+    def isTracking(self):
+        return self.slider.isSliderDown()
+    
+    def configStart( self ):
+        self.emit( QtCore.SIGNAL('ConfigCmd'), 'Start', self.slider_index ) 
+
+    def configEnd( self ):
+        self.emit( QtCore.SIGNAL('ConfigCmd'), 'End', self.slider_index ) 
+
 class SliceWidget(QtGui.QWidget):
 
-    def __init__( self ):
-        super( SliceWidget, self ).__init__() 
+    def __init__( self, parent ):
+        super( SliceWidget, self ).__init__( parent ) 
+        self.widgets = {}
         self.createTabLayout()
-        self.addTab('Data Slice Controls')
+        self.leveling_tab_index, tab_layout = self.addTab( 'Data Slice Controls' )
+        self.sLatIndex = self.addSlider( "Latitude", tab_layout , min_value=-90, max_value=90, init_value=0 )
+        self.sLonIndex = self.addSlider( "Longitude", tab_layout , min_value=0, max_value=360, init_value=180 )
+        self.sLevIndex = self.addSlider( "Level", tab_layout , min_value=0, max_value=100, init_value=0 )
+        self.sTimeIndex = self.addSlider( "Time", tab_layout , min_value=0, max_value=100, init_value=0 )
+
+    def addSlider(self, label, layout, **args ):
+        slider_index = len( self.widgets ) 
+        slider = LabeledSliderWidget( slider_index, label, **args )
+        self.connect( slider, QtCore.SIGNAL('ConfigCmd'), self.processSliderConfigCmd )
+        layout.addWidget( slider  ) 
+        self.widgets[slider_index] = slider
+        return slider_index
+    
+    def processSliderConfigCmd( self, cmd, slider_index, values=None  ):
+        print "Slider[%d] Config Cmd ( %s ): %s " % ( slider_index, cmd, str(values) )
         
     def loadFromCommand( self, config_file_path ):
         pass
@@ -59,33 +167,24 @@ class SliceWidget(QtGui.QWidget):
         self.connect(self.btnCancel, QtCore.SIGNAL('clicked(bool)'),  self.cancel )
         
     def ok(self):
-        pass
+        self.parent().close()
 
     def cancel(self):
-        pass
+        self.parent().close()
         
 class SliceWidgetWindow(QtGui.QMainWindow):
 
     def __init__(self, parent = None):
         QtGui.QMainWindow.__init__(self, parent)
-        self.wizard = SliceWidget()
+        self.wizard = SliceWidget( self )
         self.setCentralWidget(self.wizard)
         self.setWindowTitle("Hyperwall Data Browser")
-        self.resize(1000,600)
+        self.resize(700,400)
                 
 if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
+    app = QtGui.QApplication( ['Hyperwall Data Browser'] )
     window = SliceWidgetWindow()
     if len(sys.argv)>2 and sys.argv[1] == '-c':
         window.wizard.loadFromCommand(sys.argv[2:])
     window.show()
-    app.exec_()
-        
-        
-if __name__ == '__main__': 
-    
-    app = QtGui.QApplication(['ImageSlicerTest'])
-     
-    w = SliceWidgetWindow()    
-    
-    app.exec_()   
+    app.exec_()  
