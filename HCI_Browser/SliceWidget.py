@@ -125,8 +125,11 @@ class SliceWidget(QtGui.QWidget):
         if self.comm:
             self.comm.post( { 'type': 'Slider', 'index' : slider_index, 'cmd' : cmd, 'values' : values } )
         
-    def loadFromCommand( self, config_file_path ):
-        pass
+    def processConfig( self, config_data ):
+        global_config = config_data['global']
+        self.nrows = global_config.get('nrows',3)
+        self.ncols = global_config.get('ncol',5)
+        self.roi = global_config.get('roi',None)
     
     def updateTabPanel( self, index ):
         pass

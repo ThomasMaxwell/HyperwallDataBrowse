@@ -7,7 +7,45 @@ from PyQt4 import QtCore, QtGui
 import ClusterCommunicator
 from SliceWidget import SliceWidgetWindow
 from CellPlotWidget import CellPlotWidgetWindow
-import sys
+import sys, os
+
+def isList( val ):
+    valtype = type(val)
+    return ( valtype ==type(list()) ) or  ( valtype ==type(tuple()) )
+
+class ConfigFileParser( QtCore.QObject ):
+    
+    def __init__ (self, configFilePath ):
+        self.config_file = open( os.path.expanduser(configFilePath), 'r' )
+        self.cats = {}
+        self.current_cat = None
+        self.parse()
+        
+    def parse(self):
+        while True:
+            line = self.config_file.readline()
+            if not line: break
+            else: line = line.strip()
+            if line[0] == '[': self.addCategory( line.strip('[] \t') )
+            else:
+                toks = line.split('=')
+                if len( toks ) == 2:
+                    self.addField( toks[0].strip(), toks[1].strip() )
+                    
+    def addCategory( self, cat_name ):
+        if cat_name in self.cats:
+            self.current_cat = self.cats[ cat_name ]
+        else:
+            self.current_cat = {}
+            self.cats[ cat_name ] = self.current_cat
+            
+    def addField( self, name, value ):
+        if self.current_cat == None: self.addCategory( 'global' )
+        vlist = value.split(',')
+        self.current_cat[ name ] = value if isList( vlist ) else [ val.strip() for val in vlist ]  
+        
+    def data(self): 
+        return self.cats     
 
 if __name__ == "__main__":
     app = QtGui.QApplication( ['Hyperwall Data Browser'] )
@@ -16,7 +54,8 @@ if __name__ == "__main__":
     if hcomm.rank == 0:
         window = SliceWidgetWindow( hcomm )
         if len(sys.argv)>2 and sys.argv[1] == '-c':
-            window.wizard.loadFromCommand(sys.argv[2:])
+            config = ConfigFileParser( sys.argv[2] )
+            window.wizard.processConfig( config.data() )
         app.connect( app, QtCore.SIGNAL("aboutToQuit()"), window.terminate ) 
         window.show()
     else:
