@@ -101,9 +101,10 @@ class LabeledSliderWidget( QtGui.QWidget ):
 
 class SliceWidget(QtGui.QWidget):
 
-    def __init__( self, parent ):
+    def __init__( self, parent, hcomm ):
         super( SliceWidget, self ).__init__( parent ) 
         self.widgets = {}
+        self.comm = hcomm
         self.createTabLayout()
         self.leveling_tab_index, tab_layout = self.addTab( 'Data Slice Controls' )
         self.sLatIndex = self.addSlider( "Latitude", tab_layout , min_value=-90, max_value=90, init_value=0 )
@@ -120,7 +121,9 @@ class SliceWidget(QtGui.QWidget):
         return slider_index
     
     def processSliderConfigCmd( self, cmd, slider_index, values=None  ):
-        print "Slider[%d] Config Cmd ( %s ): %s " % ( slider_index, cmd, str(values) )
+#        print "Slider[%d] Config Cmd ( %s ): %s " % ( slider_index, cmd, str(values) )
+        if self.comm:
+            self.comm.post( { 'type': 'Slider', 'index' : slider_index, 'cmd' : cmd, 'values' : values } )
         
     def loadFromCommand( self, config_file_path ):
         pass
@@ -171,15 +174,23 @@ class SliceWidget(QtGui.QWidget):
 
     def cancel(self):
         self.parent().close()
+
+    def terminate(self):
+        if self.comm: self.comm.stop()        
+        self.close()
         
 class SliceWidgetWindow(QtGui.QMainWindow):
 
-    def __init__(self, parent = None):
+    def __init__(self, comm = None, parent = None):
         QtGui.QMainWindow.__init__(self, parent)
-        self.wizard = SliceWidget( self )
+        self.wizard = SliceWidget( self, comm )
         self.setCentralWidget(self.wizard)
         self.setWindowTitle("Hyperwall Data Browser")
         self.resize(700,400)
+
+    def terminate(self):
+        self.wizard.terminate()
+        self.close()
                 
 if __name__ == "__main__":
     app = QtGui.QApplication( ['Hyperwall Data Browser'] )
