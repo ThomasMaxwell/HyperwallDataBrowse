@@ -6,6 +6,7 @@ Created on Jan 13, 2014
 from PyQt4 import QtCore, QtGui
 import sys, vtk, os, cdms2
 from ClusterCommunicator import control_message_signal
+from vtkRenderWidget import QVTKClientWidget, VTK_BACKGROUND_COLOR
 
 class WindowDisplayMode:
     Normal = 0
@@ -22,9 +23,10 @@ class CellPlotWidget( QtGui.QWidget ):
         self.roi = None
         self.file = None
         self.var = None
-        self.connect( hcomm, control_message_signal, self.processConfigCmd )
         self.buildCanvas()
-        self.comm.start()
+        if self.comm: 
+            self.comm.connect( hcomm, control_message_signal, self.processConfigCmd )
+            self.comm.start()
         
     def processConfigCmd( self, msg ):
         print " CellPlotWidget: Process Config Cmd: ", str( msg )
@@ -32,7 +34,7 @@ class CellPlotWidget( QtGui.QWidget ):
             self.terminate()
             self.parent().close()
         elif msg['type'] == 'Config': 
-            self.processConfigData( msg['data'] )
+            self.processConfigData( msg['data'] )   
                 
     def processConfigData( self, config_data ):   
         global_config = config_data.get('global', None )
@@ -55,7 +57,15 @@ class CellPlotWidget( QtGui.QWidget ):
             print "Initialized variable %s from file %s"  % ( self.varname, self.filepath )  
         
     def buildCanvas(self):
-        pass
+        top_level_layout = QtGui.QVBoxLayout() 
+        self.setLayout(top_level_layout)
+        self.cellWidget =  QVTKClientWidget(self)
+        self.renWin = self.cellWidget.GetRenderWindow() 
+        self.iren = self.renWin.GetInteractor()
+        self.renderer = vtk.vtkRenderer()
+        self.renderer.SetBackground( VTK_BACKGROUND_COLOR[0], VTK_BACKGROUND_COLOR[1], VTK_BACKGROUND_COLOR[2] )
+        self.renWin.AddRenderer( self.renderer )
+        top_level_layout.addWidget( self.cellWidget )
 
     def terminate(self):
         self.file.close()
