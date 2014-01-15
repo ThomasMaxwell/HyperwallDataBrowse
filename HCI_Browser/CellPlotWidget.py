@@ -6,7 +6,7 @@ Created on Jan 13, 2014
 from PyQt4 import QtCore, QtGui
 import sys, vtk, os, cdms2
 from ClusterCommunicator import control_message_signal
-from vtkRenderWidget import QVTKClientWidget, VTK_BACKGROUND_COLOR
+from vtkQtIntegration import QVTKClientWidget, VTK_BACKGROUND_COLOR
 
 class WindowDisplayMode:
     Normal = 0
@@ -66,6 +66,49 @@ class CellPlotWidget( QtGui.QWidget ):
         self.renderer.SetBackground( VTK_BACKGROUND_COLOR[0], VTK_BACKGROUND_COLOR[1], VTK_BACKGROUND_COLOR[2] )
         self.renWin.AddRenderer( self.renderer )
         top_level_layout.addWidget( self.cellWidget )
+
+        self.UserControlledLookupTable = False
+        self.ColorMap = vtk.vtkImageMapToColors()
+        self.Reslice = vtk.vtkImageReslice()
+        self.Reslice.TransformInputSamplingOff()     
+
+        self.LookupTable = self.CreateDefaultLookupTable()        
+        self.ColorMap.SetLookupTable(self.LookupTable)
+        self.ColorMap.SetOutputFormatToRGBA()
+        self.ColorMap.PassAlphaToOutputOn()
+        
+        texturePlaneMapper  = vtk.vtkPolyDataMapper()
+        texturePlaneMapper.SetInput( self.PlaneSource.GetOutput() )
+
+        self.TexturePlaneProperty  = vtk.vtkProperty()
+        self.TexturePlaneProperty.SetAmbient(1)
+        self.TexturePlaneProperty.SetInterpolationToFlat()
+        
+        self.Texture = vtk.vtkTexture()
+        self.Texture.SetQualityTo32Bit()
+        self.Texture.MapColorScalarsThroughLookupTableOff()
+        self.Texture.SetInterpolate(self.TextureInterpolate)
+        self.Texture.RepeatOff()
+        self.Texture.SetLookupTable(self.LookupTable)
+        
+        self.TexturePlaneActor   = vtk.vtkActor()
+        self.TexturePlaneActor.SetMapper(texturePlaneMapper)
+        self.TexturePlaneActor.SetTexture(self.Texture)
+        self.TexturePlaneActor.PickableOn()
+
+        scalar_range = self.imageData.GetScalarRange()        
+        if (  not self.UserControlledLookupTable ):       
+            self.LookupTable.SetTableRange( scalar_range[0], scalar_range[1] )
+            self.LookupTable.Build()            
+        self.Reslice.SetInput(self.ImageData)
+        self.Reslice.Modified()                
+        self.ColorMap.SetInput(self.Reslice.GetOutput())       
+        self.Texture.SetInput(self.ColorMap.GetOutput())
+#        self.Texture.SetInterpolate(self.TextureInterpolate)
+
+        self.renderer.AddViewProp(self.TexturePlaneActor)    
+        self.TexturePlaneActor.SetProperty(self.TexturePlaneProperty)        
+        self.TexturePlaneActor.PickableOn()
 
     def terminate(self):
         self.file.close()

@@ -8,10 +8,7 @@ import ClusterCommunicator
 from SliceWidget import SliceWidgetWindow
 from CellPlotWidget import CellPlotWidgetWindow
 import sys, os
-
-def isList( val ):
-    valtype = type(val)
-    return ( valtype ==type(list()) ) or  ( valtype ==type(tuple()) )
+from Utilities import *
 
 class ConfigFileParser( QtCore.QObject ):
     
