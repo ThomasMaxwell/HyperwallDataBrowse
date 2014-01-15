@@ -16,11 +16,12 @@ class HControllerComm( QtCore.QObject ):
         super( HControllerComm, self ).__init__()      
         self.comm = comm
         self.rank = self.comm.Get_rank()
+        self.size = self.comm.Get_size()
         assert self.rank == 0, "Controller rank ( %d ) must be 0" % self.rank
         
     def post(self, msg_object ):
         self.comm.bcast( msg_object, root = 0 )
-        
+                
     def start(self):
         pass
 
@@ -44,6 +45,7 @@ class HCellComm( QtCore.QThread ):
         super( HCellComm, self ).__init__()      
         self.comm = comm
         self.rank = self.comm.Get_rank()
+        self.size = self.comm.Get_size()
         self.sleepTime = 0.01
         self.active = True
         assert self.rank <> 0, "Cell rank must not be 0" 

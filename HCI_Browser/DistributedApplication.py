@@ -26,11 +26,13 @@ class ConfigFileParser( QtCore.QObject ):
             line = self.config_file.readline()
             if not line: break
             else: line = line.strip()
-            if line[0] == '[': self.addCategory( line.strip('[] \t') )
-            else:
-                toks = line.split('=')
-                if len( toks ) == 2:
-                    self.addField( toks[0].strip(), toks[1].strip() )
+            if line:
+                if line[0] == '[': 
+                    self.addCategory( line.strip('[] \t').lower() )
+                else:
+                    toks = line.split('=')
+                    if len( toks ) == 2:
+                        self.addField( toks[0].strip().lower(), toks[1].strip() )
                     
     def addCategory( self, cat_name ):
         if cat_name in self.cats:

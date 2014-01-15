@@ -4,7 +4,7 @@ Created on Jan 13, 2014
 @author: tpmaxwel
 '''
 from PyQt4 import QtCore, QtGui
-import sys, vtk
+import sys, vtk, os, cdms2
 from ClusterCommunicator import control_message_signal
 
 class WindowDisplayMode:
@@ -17,6 +17,11 @@ class CellPlotWidget( QtGui.QWidget ):
     def __init__(self, parent, hcomm, **args ):  
         super( CellPlotWidget, self ).__init__( parent ) 
         self.comm = hcomm
+        self.filepath = None
+        self.varname = None
+        self.roi = None
+        self.file = None
+        self.var = None
         self.connect( hcomm, control_message_signal, self.processConfigCmd )
         self.buildCanvas()
         self.comm.start()
@@ -26,11 +31,34 @@ class CellPlotWidget( QtGui.QWidget ):
         if msg['type'] == 'Quit': 
             self.terminate()
             self.parent().close()
+        elif msg['type'] == 'Config': 
+            self.processConfigData( msg['data'] )
+                
+    def processConfigData( self, config_data ):   
+        global_config = config_data.get('global', None )
+        if global_config:
+            self.roi = global_config.get('roi',None)
+            self.dir = global_config.get('dir',None)
+        iproc = self.comm.rank
+        group_data = config_data[ "c%d" % iproc ]
+        if group_data:
+            filename = group_data.get( 'file', None )
+            if filename:
+                self.filepath = filename if ( self.dir == None ) else os.path.join( self.dir, filename )
+                self.varname = group_data.get(  'var', None )
+                self.initData()
+            
+    def initData(self):
+        self.file = cdms2.open( self.filepath, 'r' ) 
+        if self.varname:
+            self.var = self.file[ self.varname ] 
+            print "Initialized variable %s from file %s"  % ( self.varname, self.filepath )  
         
     def buildCanvas(self):
         pass
 
     def terminate(self):
+        self.file.close()
         self.comm.stop()
        
 class CellPlotWidgetWindow( QtGui.QMainWindow ):

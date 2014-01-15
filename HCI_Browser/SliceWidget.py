@@ -111,6 +111,7 @@ class SliceWidget(QtGui.QWidget):
         self.sLonIndex = self.addSlider( "Longitude", tab_layout , min_value=0, max_value=360, init_value=180 )
         self.sLevIndex = self.addSlider( "Level", tab_layout , min_value=0, max_value=100, init_value=0 )
         self.sTimeIndex = self.addSlider( "Time", tab_layout , min_value=0, max_value=100, init_value=0 )
+#        print "Starting SliceWidget, rank = %d, nproc = %d" % ( self.comm.rank, self.comm.size )
 
     def addSlider(self, label, layout, **args ):
         slider_index = len( self.widgets ) 
@@ -126,10 +127,8 @@ class SliceWidget(QtGui.QWidget):
             self.comm.post( { 'type': 'Slider', 'index' : slider_index, 'cmd' : cmd, 'values' : values } )
         
     def processConfig( self, config_data ):
-        global_config = config_data['global']
-        self.nrows = global_config.get('nrows',3)
-        self.ncols = global_config.get('ncol',5)
-        self.roi = global_config.get('roi',None)
+        if self.comm:
+            self.comm.post( { 'type': 'Config',  'data' : config_data } )
     
     def updateTabPanel( self, index ):
         pass
