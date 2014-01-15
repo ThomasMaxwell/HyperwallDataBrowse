@@ -4,7 +4,7 @@ Created on Jan 15, 2014
 @author: tpmaxwel
 '''
 
-from PyQt4 import QtCore, QtGui
+#from PyQt4 import QtCore, QtGui
 import vtk, sys, traceback, copy, collections, time
 from Utilities import *
 import numpy as np
@@ -15,9 +15,66 @@ import cdms2, cdtime, cdutil, MV2
 DataSetVersion = 0
 DefaultDecimation = [ 0, 7 ]
 cdms2.axis.level_aliases.append('isobaric')
+DefaultReferenceTimeUnits = "days since 1900-1-1"
 
-messageDialog = QtGui.QErrorMessage()
-messageDialog.hide()
+class OutputRecManager:   
+            
+    def __init__( self ): 
+        self.outputRecs = {}
+            
+    def deleteOutput( self, dsid, outputName ):
+        orecMap =  self.outputRecs.get( dsid, None )
+        if orecMap: del orecMap[outputName] 
+
+    def addOutputRec( self, dsid, orec ): 
+        orecMap =  self.outputRecs.setdefault( dsid, {} )
+        orecMap[ orec.name ] = orec
+
+    def getOutputRec( self, dsid, outputName ):
+        orecMap =  self.outputRecs.get( dsid, None )
+        return orecMap[ outputName ] if orecMap else None
+
+    def getOutputRecNames( self, dsid  ): 
+        orecMap =  self.outputRecs.get( dsid, None )
+        return orecMap.keys() if orecMap else []
+
+    def getOutputRecs( self, dsid ):
+        orecMap =  self.outputRecs.get( dsid, None )
+        return orecMap.values() if orecMap else []
+          
+         
+class OutputRec:
+    
+    def __init__(self, name, **args ): 
+        self.name = name
+        self.varComboList = args.get( "varComboList", [] )
+        self.levelsCombo = args.get( "levelsCombo", None )
+        self.level = args.get( "level", None )
+        self.varTable = args.get( "varTable", None )
+        self.varList = args.get( "varList", None )
+        self.varSelections = args.get( "varSelections", [] )
+        self.type = args.get( "type", None )
+        self.ndim = args.get( "ndim", 3 )
+        self.updateSelections() 
+
+    def getVarList(self):
+        vlist = []
+        for vrec in self.varList:
+            vlist.append( str( getItem( vrec ) ) )
+        return vlist
+    
+    def getSelectedVariableList(self):
+        return [ str( varCombo.currentText() ) for varCombo in self.varComboList ]
+
+    def getSelectedLevel(self):
+        return str( self.levelsCombo.currentText() ) if self.levelsCombo else None
+    
+    def updateSelections(self):
+        self.varSelections = []
+        for varCombo in self.varComboList:
+            varSelection = str( varCombo.currentText() ) 
+            self.varSelections.append( [ varSelection, "" ] )
+
 
 class CDMSDataType:
     Volume = 1
@@ -190,7 +247,7 @@ class CDMSDatasetRecord():
                 print>>sys.stderr, " --- Error[1] opening dataset file %s: %s " % ( refFile, str( err ) )
         if not refGrid: refGrid = varData.getGrid()
         if not refGrid: 
-            mb = QtGui.QMessageBox.warning( None, "DV3D Error", "CDAT is unable to create a grid for this dataset."  )
+            print>>sys.stderr, "DV3D Error", "CDAT is unable to create a grid for this dataset."  
             return None
         refLat=refGrid.getLatitude()
         refLon=refGrid.getLongitude()
@@ -306,7 +363,7 @@ class CDMSDatasetRecord():
                 print>>sys.stderr, " --- Error[2] opening dataset file %s: %s " % ( cdmsFile, str( err ) )
         if not refGrid: refGrid = varData.getGrid()
         if not refGrid: 
-            mb = QtGui.QMessageBox.warning( None, "DV3D Error", "CDAT is unable to create a grid for this dataset."  )
+            print>>sys.stderr, "DV3D Error", "CDAT is unable to create a grid for this dataset."
             return None
         refLat=refGrid.getLatitude()
         refLon=refGrid.getLongitude()
@@ -400,7 +457,7 @@ class CDMSDatasetRecord():
 #            print>>sys.stderr, ' Exception getting var slice: %s ' % str( err )
         return rv
 
-class CDMSDataset( QtCore.QObject ): 
+class CDMSDataset: 
     
     NullVariable = cdms2.createVariable( np.array([]), id='NULL' )
 
@@ -672,8 +729,7 @@ class CDMSDataset( QtCore.QObject ):
         try:
             rv = transVar( **args1 )
         except Exception, err: 
-            messageDialog.setWindowTitle( "Error Reading Variable" )
-            messageDialog.showMessage( str(err) )
+            print>>sys.stderr, "Error Reading Variable" 
             return CDMSDataset.NullVariable
       
         try: 
@@ -740,13 +796,16 @@ class CDMSDataset( QtCore.QObject ):
     
     def getDsetId(self): 
         rv = '-'.join( self.datasetRecs.keys() )
-        return rv               
-class ImageDataReader( QtCore.QObject ):
+        return rv   
+    
+                
+class ImageDataReader:
 
     dataCache = {}
     imageDataCache = {}
     
     def __init__(self, rank, **args ):  
+        self.referenceTimeUnits = DefaultReferenceTimeUnits
         self.rank = rank
         self.datasetId = None
         self.fileSpecs = None
@@ -758,6 +817,8 @@ class ImageDataReader( QtCore.QObject ):
         self.timeValue = None
         self.useTimeIndex = False
         self.timeAxis = None
+        self.outputType = CDMSDataType.Volume
+        self.result = {}
             
     def getTimeAxis(self):
         return self.timeAxis
@@ -878,7 +939,7 @@ class ImageDataReader( QtCore.QObject ):
                 t1 = values[-1] if len(values) > 1 else t0
                 dt = ( values[1] - values[0] )/( len(values) - 1 ) if len(values) > 1 else 0
                 self.timeRange = [ 0, self.nTimesteps, t0, dt ]
-        self.setParameter( "timeRange" , self.timeRange )
+#        self.setParameter( "timeRange" , self.timeRange )
         self.cdmsDataset.timeRange = self.timeRange
         self.cdmsDataset.referenceTimeUnits = self.referenceTimeUnits
         self.timeLabels = self.cdmsDataset.getTimeValues()
@@ -894,79 +955,57 @@ class ImageDataReader( QtCore.QObject ):
 #            print "Set Time [mid = %d]: %s, NTS: %d, Range: %s, Index: %d (use: %s)" % ( self.moduleID, str(self.timeValue), self.nTimesteps, str(self.timeRange), self.timeIndex, str(self.useTimeIndex) )
 #            print "Time Step Labels: %s" % str( self.timeLabels )
            
-    def execute(self, **args ):
-#        memoryLogger.log("start CDMS_DataReader:execute")
-        cdms_vars = self.getInputValues( "variable"  ) 
-        if cdms_vars and len(cdms_vars):
-            iVar = 1
-            cdms_var = cdms_vars.pop(0)
-            self.cdmsDataset = CDMSDataset()
-            var, dsetId = self.addCDMSVariable( cdms_var, iVar )
-            self.newDataset = ( self.datasetId <> dsetId )
-            self.newLayerConfiguration = self.newDataset
-            self.datasetId = dsetId
-            self.cdmsDataset.latLonGrid = self.designateAxes(var)
-            self.setupTimeAxis( var, **args )
-            intersectedRoi = self.cdmsDataset.gridBounds
-            intersectedRoi = self.getIntersectedRoi( cdms_var, intersectedRoi )
-            while( len(cdms_vars) ):
-                cdms_var2 = cdms_vars.pop(0)
-                if cdms_var2: 
-                    iVar = iVar+1
-                    self.addCDMSVariable( cdms_var2, iVar )
-                    intersectedRoi = self.getIntersectedRoi( cdms_var2, intersectedRoi )
-                  
-            for iVarInputIndex in range( 2,5 ):
-                cdms_var2 = self.getInputValue( "variable%d" % iVarInputIndex  ) 
-                if cdms_var2: 
-                    iVar = iVar+1
-                    self.addCDMSVariable( cdms_var2, iVar )
-                    intersectedRoi = self.getIntersectedRoi( cdms_var2, intersectedRoi )
-                    
-            if hasattr(cdms_var,'url'): self.generateOutput( roi=intersectedRoi, url=cdms_var.url )
-            else:                       self.generateOutput( roi=intersectedRoi )
-#            if self.newDataset: self.addAnnotation( "datasetId", self.datasetId )
-        else:
-            dset = self.getInputValue( "dataset"  ) 
-            if dset: 
-                self.cdmsDataset = dset
+    def execute(self, dset, **args ):
+            self.cdmsDataset = dset
 #                dsetid = self.getAnnotation( "datasetId" )
 #                if dsetid: self.datasetId = dsetid 
-                dsetId = self.cdmsDataset.getDsetId()
+            dsetId = self.cdmsDataset.getDsetId()
 #                self.newDataset = ( self.datasetId <> dsetId )
-                self.newLayerConfiguration = True # self.newDataset
-                self.datasetId = dsetId
-                self.timeRange = self.cdmsDataset.timeRange
-                timeData = args.get( 'timeData', None )
-                if timeData:
-                    self.timeValue = cdtime.reltime( float(timeData[0]), self.referenceTimeUnits )
-                    self.timeIndex = timeData[1]
-                    self.useTimeIndex = timeData[2]
-                    self.timeLabels = self.cdmsDataset.getTimeValues()
-                    self.nTimesteps = self.timeRange[1]
+            self.newLayerConfiguration = True # self.newDataset
+            self.datasetId = dsetId
+            self.timeRange = self.cdmsDataset.timeRange
+            timeData = args.get( 'timeData', None )
+            if timeData:
+                self.timeValue = cdtime.reltime( float(timeData[0]), self.referenceTimeUnits )
+                self.timeIndex = timeData[1]
+                self.useTimeIndex = timeData[2]
+                self.timeLabels = self.cdmsDataset.getTimeValues()
+                self.nTimesteps = self.timeRange[1]
 #                print "Set Time: %s, NTS: %d, Range: %s, Index: %d (use: %s)" % ( str(self.timeValue), self.nTimesteps, str(self.timeRange), self.timeIndex, str(self.useTimeIndex) )
 #                print "Time Step Labels: %s" % str( self.timeLabels ) 
-                self.generateOutput( **args )
+            self.generateOutput( **args )
 #                if self.newDataset: self.addAnnotation( "datasetId", self.datasetId )
 #        memoryLogger.log("finished CDMS_DataReader:execute")
  
-            
+
+    def generateOutput( self, **args ): 
+        oRecMgr = None 
+        varRecs = self.cdmsDataset.getVarRecValues()
+        if len( varRecs ):
+            oRecMgr = OutputRecManager() 
+#            varCombo = QComboBox()
+#            for var in varRecs: varCombo.addItem( str(var) ) 
+#            otype = 'pointCloud' if ( self.outputType == CDMSDataType.Points ) else 'volume'
+            otype = 'volume'
+            orec = OutputRec( otype, ndim=3, varList=varRecs )   
+            oRecMgr.addOutputRec( self.datasetId, orec ) 
+        orecs = oRecMgr.getOutputRecs( self.datasetId ) if oRecMgr else None
+        if not orecs: raise Exception( self, 'No Variable selected for dataset %s.' % self.datasetId )             
+        for orec in orecs:
+            cachedImageDataName = self.getImageData( orec, **args ) 
+            if cachedImageDataName: 
+                cachedImageData = self.getCachedImageData( cachedImageDataName, self.rank )            
+                self.result[ orec.name ] = cachedImageData 
+                print " --> ImageDataReader:  Read data ", cachedImageDataName  
+        self.currentTime = self.getTimestep() 
+                  
     def getParameterId(self):
         return self.datasetId
             
-    def getPortData( self, **args ):
-        return self.getInputValue( "portData", **args )  
 
     def generateVariableOutput( self, cdms_var ): 
         print str(cdms_var.var)
         self.set3DOutput( name=cdms_var.name,  output=cdms_var.var )
-
-    def refreshVersion(self):
-        portData = self.getPortData()
-        if portData:
-            portDataVersion = portData[1] + 1
-            serializedPortData = portData[0]
-            self.persistParameter( 'portData', [ serializedPortData, portDataVersion ] )
         
      
     def getTimestep( self ):

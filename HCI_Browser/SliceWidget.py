@@ -107,8 +107,8 @@ class SliceWidget(QtGui.QWidget):
         self.comm = hcomm
         self.createTabLayout()
         self.leveling_tab_index, tab_layout = self.addTab( 'Data Slice Controls' )
-        self.sLatIndex = self.addSlider( "Latitude", tab_layout , min_value=-90, max_value=90, init_value=0 )
         self.sLonIndex = self.addSlider( "Longitude", tab_layout , min_value=0, max_value=360, init_value=180 )
+        self.sLatIndex = self.addSlider( "Latitude", tab_layout , min_value=-90, max_value=90, init_value=0 )
         self.sLevIndex = self.addSlider( "Level", tab_layout , min_value=0, max_value=100, init_value=0 )
         self.sTimeIndex = self.addSlider( "Time", tab_layout , min_value=0, max_value=100, init_value=0 )
 #        print "Starting SliceWidget, rank = %d, nproc = %d" % ( self.comm.rank, self.comm.size )
