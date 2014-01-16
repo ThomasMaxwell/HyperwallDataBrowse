@@ -1023,13 +1023,6 @@ class ImageDataReader:
         url = args.get('url', None )
         if intersectedRoi: self.cdmsDataset.setRoi( intersectedRoi )
         dsid = None
-        fieldData = self.getFieldData()
-        if fieldData:
-            na = fieldData.GetNumberOfArrays()
-            for ia in range(na):
-                aname = fieldData.GetArrayName(ia)
-                if (aname <> None) and aname.startswith('metadata'):
-                    fieldData.RemoveArray(aname)
         vars = []
         for varRec in varList:
             range_min, range_max, scale, shift  = 0.0, 0.0, 1.0, 0.0   
@@ -1350,20 +1343,13 @@ class ImageDataReader:
 #            print " ********************* Create Image Data, extent = %s, spacing = %s ********************* " % ( str(extent), str(gridSpacing) )
 #            offset = ( -gridSpacing[0]*gridExtent[0], -gridSpacing[1]*gridExtent[2], -gridSpacing[2]*gridExtent[4] )
             self.setCachedImageData( cachedImageDataName, self.rank, image_data )
-                
+            
+        fieldData = image_data.GetFieldData()        
         nVars = len( varList )
 #        npts = image_data.GetNumberOfPoints()
         pointData = image_data.GetPointData()
         for aname in range( pointData.GetNumberOfArrays() ): 
             pointData.RemoveArray( pointData.GetArrayName(aname) )
-        fieldData = self.getFieldData()
-        if fieldData:
-            na = fieldData.GetNumberOfArrays()
-            for ia in range(na):
-                aname = fieldData.GetArrayName(ia)
-                if (aname <> None) and aname.startswith('metadata'):
-                    fieldData.RemoveArray(aname)
-    #                print 'Remove fieldData Array: %s ' % aname
         extent = image_data.GetExtent()    
         scalars, nTup = None, 0
         vars = [] 
