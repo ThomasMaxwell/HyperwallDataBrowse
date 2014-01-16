@@ -16,6 +16,7 @@ class ConfigFileParser( QtCore.QObject ):
         self.config_file = open( os.path.expanduser(configFilePath), 'r' )
         self.cats = {}
         self.current_cat = None
+        self.current_cat_name = None
         self.parse()
         
     def parse(self):
@@ -37,6 +38,7 @@ class ConfigFileParser( QtCore.QObject ):
         else:
             self.current_cat = {}
             self.cats[ cat_name ] = self.current_cat
+        self.current_cat_name = cat_name
             
     def addField( self, name, value ):
         if self.current_cat == None: self.addCategory( 'global' )

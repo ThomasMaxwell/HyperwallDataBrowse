@@ -70,20 +70,23 @@ class CellPlotWidget( QtGui.QWidget ):
             self.roi = global_config.get('roi',None)
             self.dir = global_config.get('dir',None)
         iproc = self.comm.rank
+        dset = None
         cell_data = config_data.get( "c%d" % iproc, None )
         if cell_data:
-            dset = cell_data.get( 'ds', None )
+            var = cell_data.get( 'dv', None )
+            if var:
+                var_data = config_data.get( var, None )
+                if var_data:                
+                    self.varname = var_data.get( 'name', None )
+                    dset = var_data.get( 'ds', None )
+            else: print>>sys.stderr, "Error, no variable declared for cell %d " % iproc
             if dset:
                 dset_data = config_data.get( dset, None )
                 if dset_data:                
                     filename = dset_data.get( 'file', None )
                     self.dset_id = dset_data.get( 'id', dset )
                     self.filepath = filename if ( self.dir == None ) else os.path.join( self.dir, filename )
-            var = cell_data.get( 'dv', None )
-            if var:
-                var_data = config_data.get( var, None )
-                if var_data:                
-                    self.varname = var_data.get( 'name', None )
+                else: print>>sys.stderr, "Error, no dataset declared for cell %d " % iproc
             self.initData()
             
     def initData(self):
