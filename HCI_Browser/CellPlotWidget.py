@@ -30,7 +30,7 @@ class CellPlotWidget( QtGui.QWidget ):
         self.filepath = None
         self.varname = None
         self.roi = None
-        self.var = None
+        self.imageData = None
         if self.comm: 
             self.comm.connect( hcomm, control_message_signal, self.processConfigCmd )
             self.comm.start()
@@ -98,6 +98,10 @@ class CellPlotWidget( QtGui.QWidget ):
             self.dset.setReferenceVariable( varSpec )
             self.reader = ImageDataReader( self.comm.rank )
             self.reader.execute( self.dset )
+            print "Read Image Data: %s " % str( self.reader.result.keys() )
+            self.imageData = self.reader.result.get( 'volume', None )
+            if self.imageData: self.Reslice.SetInput( self.imageData )
+
          
     def buildCanvas(self):
         if self.cellWidget <> None: return
@@ -106,6 +110,8 @@ class CellPlotWidget( QtGui.QWidget ):
         self.cellWidget =  QVTKClientWidget(self)
         self.renWin = self.cellWidget.GetRenderWindow() 
         self.iren = self.renWin.GetInteractor()
+        interactorStyle = vtk.vtkInteractorStyleTerrain()
+        self.iren.SetInteractorStyle( interactorStyle )
         self.renderer = vtk.vtkRenderer()
         self.renderer.SetBackground( VTK_BACKGROUND_COLOR[0], VTK_BACKGROUND_COLOR[1], VTK_BACKGROUND_COLOR[2] )
         self.renWin.AddRenderer( self.renderer )
@@ -120,9 +126,18 @@ class CellPlotWidget( QtGui.QWidget ):
         self.ColorMap.SetLookupTable(self.LookupTable)
         self.ColorMap.SetOutputFormatToRGBA()
         self.ColorMap.PassAlphaToOutputOn()
+
+        psize = [ 100.0, 100.0  ] 
+        pbounds = [ -psize[0], psize[0], -psize[1], psize[1] ]  
+        self.PlaneSource  = vtk.vtkPlaneSource()
+        self.PlaneSource.SetXResolution(1)
+        self.PlaneSource.SetYResolution(1)
+        self.PlaneSource.SetOrigin(pbounds[0],pbounds[2], 0.0 )
+        self.PlaneSource.SetPoint1(pbounds[1],pbounds[2], 0.0 )
+        self.PlaneSource.SetPoint2(pbounds[0],pbounds[3], 0.0 )
          
         texturePlaneMapper  = vtk.vtkPolyDataMapper()
-#        texturePlaneMapper.SetInput( self.PlaneSource.GetOutput() )
+        texturePlaneMapper.SetInput( self.PlaneSource.GetOutput() )
  
         self.TexturePlaneProperty  = vtk.vtkProperty()
         self.TexturePlaneProperty.SetAmbient(1)
@@ -143,9 +158,8 @@ class CellPlotWidget( QtGui.QWidget ):
 #         scalar_range = self.imageData.GetScalarRange()        
 #         if (  not self.UserControlledLookupTable ):       
 #             self.LookupTable.SetTableRange( scalar_range[0], scalar_range[1] )
-#             self.LookupTable.Build()            
-#         self.Reslice.SetInput(self.ImageData)
-        
+#             self.LookupTable.Build()   
+                 
         self.Reslice.Modified()                
         self.ColorMap.SetInput(self.Reslice.GetOutput())       
         self.Texture.SetInput(self.ColorMap.GetOutput())
