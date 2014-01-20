@@ -1,4 +1,4 @@
-dir = /Users/tpmaxwell/Data/AConaty/comp-ECMWF
+dir = ~/Data/AConaty/comp-ECMWF
 
 [ds1]
    id = geos5

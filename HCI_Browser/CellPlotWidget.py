@@ -7,6 +7,7 @@ from PyQt4 import QtCore, QtGui
 import sys, vtk, os, cdms2
 from ClusterCommunicator import control_message_signal
 from NcImageDataReader import CDMSDataset, ImageDataReader
+from ColormapManager import ColorMapManager
 from vtkQtIntegration import QVTKClientWidget, VTK_BACKGROUND_COLOR
 
 VTK_NEAREST_RESLICE = 0
@@ -38,10 +39,10 @@ class CellPlotWidget( QtGui.QWidget ):
     def CreateDefaultLookupTable(self):    
         lut  = vtk.vtkLookupTable()
         lut.SetNumberOfColors( 256 )
-        lut.SetHueRange( 0, 0)
-        lut.SetSaturationRange( 0, 0)
-        lut.SetValueRange( 0 ,1)
-        lut.SetAlphaRange( 1, 1)
+        lut.SetHueRange( 0, 1 )
+        lut.SetSaturationRange( 0, 1 )
+        lut.SetValueRange( 0 , 1 )
+        lut.SetAlphaRange( 1, 1 )
         lut.Build()
         return lut
             
@@ -120,15 +121,21 @@ class CellPlotWidget( QtGui.QWidget ):
         self.UserControlledLookupTable = False
         self.ColorMap = vtk.vtkImageMapToColors()
         self.Reslice = vtk.vtkImageReslice()
-        self.Reslice.TransformInputSamplingOff()     
- 
-        self.LookupTable = self.CreateDefaultLookupTable()        
+        self.Reslice.TransformInputSamplingOff() 
+        self.Reslice.SetOutputDimensionality(2)  
+        self.Reslice.SetResliceAxesOrigin( 0, 0, 0 )
+        self.Reslice.SetResliceAxesDirectionCosines( 1, 0, 0, 0, 1, 0, 0, 0, 1 )  
+        
+        self.LookupTable = vtk.vtkLookupTable()
+        self.colorMapManager = ColorMapManager( self.LookupTable ) 
+        self.colorMapManager.load_lut('jet')
+       
         self.ColorMap.SetLookupTable(self.LookupTable)
         self.ColorMap.SetOutputFormatToRGBA()
         self.ColorMap.PassAlphaToOutputOn()
 
-        psize = [ 100.0, 100.0  ] 
-        pbounds = [ -psize[0], psize[0], -psize[1], psize[1] ]  
+        psize = [ 400.0, 400.0  ] 
+        pbounds = [ 0.0, psize[0], 0.0, psize[1] ]  
         self.PlaneSource  = vtk.vtkPlaneSource()
         self.PlaneSource.SetXResolution(1)
         self.PlaneSource.SetYResolution(1)
