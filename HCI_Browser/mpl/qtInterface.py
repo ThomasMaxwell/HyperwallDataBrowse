@@ -2,7 +2,7 @@ import sys, os, random
 from PyQt4 import QtGui, QtCore
 
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
+from matplotlib.figure import Figure, SubplotParams
 
 progname = "Hyperwall Cell Plot"
 progversion = "0.1"
@@ -13,7 +13,7 @@ class qtMplCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
     def __init__( self, parent=None, **kwargs ): 
 #        fig = Figure(figsize=(width, height), dpi=dpi) # , width=5, height=4, dpi=100, **kwargs):
-        fig = Figure()
+        fig = Figure( subplotpars=SubplotParams(left=0.05, right=0.95, bottom=0.05, top=0.95 ) )
         self.axes = fig.add_subplot(111)    
         self.axes.hold(False)                   # We want the axes cleared every time plot() is called    
         self.compute_initial_figure()
