@@ -1015,64 +1015,64 @@ class ImageDataReader:
     def setCurrentLevel(self, level ): 
         self.currentLevel = level
 
-    def getFileMetadata( self, orec, **args ):
-        varList = orec.varList
-        if len( varList ) == 0: return False
-        varDataIds = []
-        intersectedRoi = args.get('roi', None )
-        url = args.get('url', None )
-        if intersectedRoi: self.cdmsDataset.setRoi( intersectedRoi )
-        dsid = None
-        vars = []
-        for varRec in varList:
-            range_min, range_max, scale, shift  = 0.0, 0.0, 1.0, 0.0   
-            imageDataName = getItem( varRec )
-            varNameComponents = imageDataName.split('*')
-            if len( varNameComponents ) == 1:
-                dsid = self.cdmsDataset.getReferenceDsetId() 
-                varName = varNameComponents[0]
-            else:
-                dsid = varNameComponents[0]
-                varName = varNameComponents[1]
-            ds = self.cdmsDataset[ dsid ]
-            if ds:
-                var = ds.getVariable( varName )
-                self.setupTimeAxis( var, **args )
-            portName = orec.name
-            selectedLevel = orec.getSelectedLevel() if ( self.currentLevel == None ) else self.currentLevel
-            ndim = 3 if ( orec.ndim == 4 ) else orec.ndim
-            default_dtype = np.float32
-            scalar_dtype = args.get( "dtype", default_dtype )
-            self._max_scalar_value = getMaxScalarValue( scalar_dtype )
-            self._range = [ 0.0, self._max_scalar_value ]  
-            datatype = getDatatypeString( scalar_dtype )
-            if (self.outputType == CDMSDataType.Hoffmuller):
-                if ( selectedLevel == None ):
-                    varDataIdIndex = 0
-                else:
-                    varDataIdIndex = selectedLevel  
-                                      
-            iTimestep = self.timeIndex if ( varName <> '__zeros__' ) else 0
-            varDataIdIndex = iTimestep  
-            roiStr = ":".join( [ ( "%.1f" % self.cdmsDataset.gridBounds[i] ) for i in range(4) ] ) if self.cdmsDataset.gridBounds else ""
-            varDataId = '%s;%s;%d;%s;%s' % ( dsid, varName, self.outputType, str(varDataIdIndex), roiStr )
-            vmd = {}         
-            vmd[ 'dsid' ] = dsid 
-            vmd[ 'file' ] = url if url else dsid              
-            vmd[ 'varName' ] = varName                 
-            vmd[ 'outputType' ] = self.outputType                 
-            vmd[ 'varDataIdIndex' ] = varDataIdIndex
-            vmd['datatype'] = datatype
-            vmd['timeIndex']= iTimestep
-            vmd['timeValue']= self.timeValue.value
-            vmd['latLonGrid']= self.cdmsDataset.latLonGrid
-            vmd['timeUnits' ] = self.referenceTimeUnits 
-            vmd[ 'bounds' ] = self.cdmsDataset.gridBounds          
-            enc_mdata = encodeToString( vmd ) 
-            if enc_mdata and fieldData: 
-                fieldData.AddArray( getStringDataArray( 'metadata:%s' % varName,   [ enc_mdata ]  ) ) 
-                vars.append( varName )                   
-        fieldData.AddArray( getStringDataArray( 'varlist',  vars  ) )                       
+#    def getFileMetadata( self, orec, **args ):
+#        varList = orec.varList
+#        if len( varList ) == 0: return False
+#        varDataIds = []
+#        intersectedRoi = args.get('roi', None )
+#        url = args.get('url', None )
+#        if intersectedRoi: self.cdmsDataset.setRoi( intersectedRoi )
+#        dsid = None
+#        vars = []
+#        for varRec in varList:
+#            range_min, range_max, scale, shift  = 0.0, 0.0, 1.0, 0.0   
+#            imageDataName = getItem( varRec )
+#            varNameComponents = imageDataName.split('*')
+#            if len( varNameComponents ) == 1:
+#                dsid = self.cdmsDataset.getReferenceDsetId() 
+#                varName = varNameComponents[0]
+#            else:
+#                dsid = varNameComponents[0]
+#                varName = varNameComponents[1]
+#            ds = self.cdmsDataset[ dsid ]
+#            if ds:
+#                var = ds.getVariable( varName )
+#                self.setupTimeAxis( var, **args )
+#            portName = orec.name
+#            selectedLevel = orec.getSelectedLevel() if ( self.currentLevel == None ) else self.currentLevel
+#            ndim = 3 if ( orec.ndim == 4 ) else orec.ndim
+#            default_dtype = np.float32
+#            scalar_dtype = args.get( "dtype", default_dtype )
+#            self._max_scalar_value = getMaxScalarValue( scalar_dtype )
+#            self._range = [ 0.0, self._max_scalar_value ]  
+#            datatype = getDatatypeString( scalar_dtype )
+#            if (self.outputType == CDMSDataType.Hoffmuller):
+#                if ( selectedLevel == None ):
+#                    varDataIdIndex = 0
+#                else:
+#                    varDataIdIndex = selectedLevel  
+#                                      
+#            iTimestep = self.timeIndex if ( varName <> '__zeros__' ) else 0
+#            varDataIdIndex = iTimestep  
+#            roiStr = ":".join( [ ( "%.1f" % self.cdmsDataset.gridBounds[i] ) for i in range(4) ] ) if self.cdmsDataset.gridBounds else ""
+#            varDataId = '%s;%s;%d;%s;%s' % ( dsid, varName, self.outputType, str(varDataIdIndex), roiStr )
+#            vmd = {}         
+#            vmd[ 'dsid' ] = dsid 
+#            vmd[ 'file' ] = url if url else dsid              
+#            vmd[ 'varName' ] = varName                 
+#            vmd[ 'outputType' ] = self.outputType                 
+#            vmd[ 'varDataIdIndex' ] = varDataIdIndex
+#            vmd['datatype'] = datatype
+#            vmd['timeIndex']= iTimestep
+#            vmd['timeValue']= self.timeValue.value
+#            vmd['latLonGrid']= self.cdmsDataset.latLonGrid
+#            vmd['timeUnits' ] = self.referenceTimeUnits 
+#            vmd[ 'bounds' ] = self.cdmsDataset.gridBounds          
+#            enc_mdata = encodeToString( vmd ) 
+#            if enc_mdata and fieldData: 
+#                fieldData.AddArray( getStringDataArray( 'metadata:%s' % varName,   [ enc_mdata ]  ) ) 
+#                vars.append( varName )                   
+#        fieldData.AddArray( getStringDataArray( 'varlist',  vars  ) )                       
 
     def getAxisValues( self, axis, roi ):
         values = axis.getValue()
