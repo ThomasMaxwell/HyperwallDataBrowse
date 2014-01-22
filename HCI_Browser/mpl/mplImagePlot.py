@@ -7,8 +7,10 @@ Created on Jan 21, 2014
 import matplotlib.pyplot as plt
 from PyQt4 import QtCore, QtGui
 import sys, os, cdms2, random
-from qtInterface import qtMplCanvas
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure, SubplotParams
 
+progversion = "0.1"
 progname = "Hyperwall Cell Plot"
 
 cmaps = [('Sequential',     ['binary', 'Blues', 'BuGn', 'BuPu', 'gist_yarg',
@@ -35,27 +37,55 @@ class WindowDisplayMode:
 def getAxisLabel( coord_axis ): 
     try:    return "%s (%s)" % ( coord_axis.long_name, coord_axis.units )
     except: return coord_axis.id
-   
-class mplImagePlot(qtMplCanvas):
 
-    def __init__(self, *args, **kwargs):
-        qtMplCanvas.__init__(self, *args, **kwargs)
-        self.cmap = None
-        self.norm = None
-        self.aspect = None
-        self.interpolation = None
-        self.alpha = None
-        self.vrange = [ None, None ]
-        self.origin = None
-        self.extent = None
-        self.shape = None
-        self.filternorm = None
-        self.filterrad = 4.0
-        self.imlim = None
-        self.resample = None
-        self.url = None
+class mplSlicePlot(FigureCanvas):
+
+    def __init__(self, parent, *args, **kwargs):
+        fig = Figure( subplotpars=SubplotParams(left=0.05, right=0.95, bottom=0.05, top=0.95 ) )
+        self.axes = fig.add_subplot(111)    
+        self.axes.hold(False)                   # We want the axes cleared every time plot() is called    
+        self.compute_initial_figure()
+        FigureCanvas.__init__(self, fig)
+        self.setParent(parent)
+        FigureCanvas.setSizePolicy(self, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        FigureCanvas.updateGeometry(self)
+        timestep = kwargs.get( 'timestep', None )
+        if timestep:
+            self.timer = QtCore.QTimer(self)
+            QtCore.QObject.connect(self.timer, QtCore.SIGNAL("timeout()"), self.update_figure)
+            self.timer.start(1000)
+        self.parms = {}
+        self.parms[ 'filterrad' ] = 4.0
         self.plot = None
+        
+    def param(self, pname, defval = None ):
+        return self.parms.get( pname, defval )
+        
 
+#        self.cmap = None
+#        self.norm = None
+#        self.aspect = None
+#        self.interpolation = None
+#        self.alpha = None
+#        self.vrange = [ None, None ]
+#        self.origin = None
+#        self.extent = None
+#        self.shape = None
+#        self.filternorm = None
+#        self.filterrad = 4.0
+#        self.imlim = None
+#        self.resample = None
+#        self.url = None
+
+    def initCanvas( self, parent ): 
+#        fig = Figure(figsize=(width, height), dpi=dpi) # , width=5, height=4, dpi=100, **kwargs):
+
+    def compute_initial_figure(self):
+        pass
+
+    def update_figure(self):   
+        pass   
+    
     def compute_initial_figure(self):  
         pass
     
