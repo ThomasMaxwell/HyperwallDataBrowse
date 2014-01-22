@@ -84,7 +84,7 @@ class CellPlotWidget( QtGui.QWidget ):
 
     def positionSlice( self, iAxis, slider_pos, coord_value ):
         dataSlice = self.dataSlicer.getSlice( iAxis, self.iTimeIndex, slider_pos, coord_value )          
-        if dataSlice <> None:
+        if id(dataSlice) <> id(None):
             self.slicedImageData =  dataSlice     
             self.cellWidget.plotSlice( iAxis, self.slicedImageData, coord_value )   
      

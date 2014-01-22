@@ -6,7 +6,14 @@ Created on Jan 20, 2014
 from PyQt4 import QtGui, QtCore
 import cdms2, sys
 
+class CacheLevel:
+    NoCache = 0
+    CurrentTimestep = 1
+    AllTimesteps = 2
+    
 class DataSlicer( QtCore.QObject ):
+    
+    dsCacheLevel = CacheLevel.AllTimesteps
     
     def __init__(self, dsetPath, varName, **args ):  
         self.dset = cdms2.open( dsetPath, 'r' )
@@ -23,7 +30,8 @@ class DataSlicer( QtCore.QObject ):
         if dataCube == None:
             dataCube = self.var( time=slice(iTime,iTime+1), order ='zyx' )
             dataCube = dataCube.data.squeeze() 
-            self.timestep_cache[ iTime ] = dataCube 
+            if ( self.dsCacheLevel == CacheLevel.AllTimesteps ):
+                self.timestep_cache[ iTime ] = dataCube 
         return dataCube 
     
     def getSlice( self, iAxis, iTime, slider_pos, coord_value ):
@@ -38,26 +46,30 @@ class DataSlicer( QtCore.QObject ):
         values = axis.getValue()
         nvals = len( values )
 #        fval = values[0] + slider_pos * ( values[-1] - values[0] ) 
-        iVal0 = int ( slider_pos * nvals )
-        if ( iAxis == self.currentAxis ) and ( iVal0 == self.currentSlice ): return None
-        if ( iVal0 > nvals - 1 ): iVal0 = nvals - 1
-        dataCube = self.getDataCube( iTime )
+        iVal = int ( slider_pos * nvals )
+        if ( iAxis == self.currentAxis ) and ( iVal == self.currentSlice ): return None
+        if ( iVal > nvals - 1 ): iVal = nvals - 1
+        dataCube = None if ( self.dsCacheLevel == CacheLevel.NoCache ) else self.getDataCube( iTime )
+        hasDataCube = ( id(dataCube) <> id(None) )
+        if not hasDataCube:
+            iVal0 = nvals - 2 if (iVal == nvals - 1) else iVal
+            iVal1 = iVal0 + 1
         try:
-            if  iAxis == 0:   dataslice = dataCube[ :, :, iVal0 ]
-#                dataslice = self.var( time=slice(iTime,iTime+1), longitude = slice(iVal0,iVal1), order ='zy' )          
-#                dataslice = self.var( time=slice(iTime,iTime+1), longitude = coord_value, order ='yz' )          
-            elif  iAxis == 1: dataslice = dataCube[ :, iVal0, : ]
-#                dataslice = self.var( time=slice(iTime,iTime+1), latitude = slice(iVal0,iVal1), order ='zx'  )          
-#                dataslice = self.var( time=slice(iTime,iTime+1), latitude = coord_value, order ='xz'  )          
-            elif  iAxis == 2: dataslice = dataCube[ iVal0, :, : ]
-#                dataslice = self.var( time=slice(iTime,iTime+1), level = slice(iVal0,iVal1), order ='yx'  ) 
-#                dataslice = self.var( time=slice(iTime,iTime+1), level = coord_value, order ='xy'  ) 
+            if  iAxis == 0:   
+                if hasDataCube:     dataslice = dataCube[ :, :, iVal ]
+                else:               dataslice = self.var( time=slice(iTime,iTime+1), longitude = slice(iVal0,iVal1), order ='zy' )                  
+            elif  iAxis == 1: 
+                if hasDataCube:     dataslice = dataCube[ :, iVal, : ]
+                else:               dataslice = self.var( time=slice(iTime,iTime+1), latitude = slice(iVal0,iVal1), order ='zx'  )                 
+            elif  iAxis == 2: 
+                if hasDataCube:     dataslice = dataCube[ iVal, :, : ]
+                else:               dataslice = self.var( time=slice(iTime,iTime+1), level = slice(iVal0,iVal1), order ='yx'  ) 
         except cdms2.error.CDMSError, err:
             print>>sys.stderr, "Error getting slice[%d] (%.2f): %s " % ( iAxis, coord_value, str(err) )
             return None
         
         self.currentAxis = iAxis 
-        self.currentSlice = iVal0 
+        self.currentSlice = iVal 
         imageOutput =  dataslice.squeeze() 
              
         return imageOutput

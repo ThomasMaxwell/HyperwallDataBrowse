@@ -155,7 +155,7 @@ class mplSlicePlot(FigureCanvas):
             self.annotation_box.set_text( textstr )
                 
     def update_figure( self, refresh = True, label=None, **kwargs ):    
-        if self.data <> None:
+        if ( id(self.data) <> id(None) ):
             if refresh:
                 self.plot = self.axes.imshow( self.data, cmap=self.param('cmap'), norm=self.param('norm'), aspect=self.param('aspect'), interpolation=self.param('interpolation'), alpha=self.param('self.alpha'), vmin=self.vrange[0],
                             vmax=self.vrange[1], origin=self.param('origin'), extent=self.param('extent'), shape=self.param('shape'), filternorm=self.param('filternorm'), filterrad=self.param('filterrad',4.0),
@@ -168,7 +168,6 @@ class mplSlicePlot(FigureCanvas):
                 self.setAxisLabels()
                 self.annotation_box = None
             else:
-                print "Plot: ", label
                 self.plot.set_array(self.data)
             if label: self.showAnnotation( label )
             FigureCanvasAgg.draw(self)
