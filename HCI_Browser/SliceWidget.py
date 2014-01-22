@@ -61,7 +61,7 @@ class LabeledSliderWidget( QtGui.QWidget ):
         slider_layout.addLayout( slider_container  )
         slider_layout.addSpacing( 20 )
          
-        self.value_pane = QtGui.QLabel( "%6.2f" % self.getSliderValue()  )   
+        self.value_pane = QtGui.QLabel( "%6.2f" % self.getCoordinateValue()  )   
         self.value_pane.setFrameStyle( QtGui.QFrame.StyledPanel | QtGui.QFrame.Raised   )     
         self.value_pane.setLineWidth( 2 )
         self.value_pane.setFixedWidth( 60 )
@@ -77,18 +77,23 @@ class LabeledSliderWidget( QtGui.QWidget ):
         index_value = int( round( self.minValue + normailzed_slider_value * ( self.maxValue - self.minValue ) ) )
         scaled_slider_value = self.scaledMinValue + normailzed_slider_value * ( self.scaledMaxValue - self.scaledMinValue )
         self.value_pane.setText( str( scaled_slider_value ) )
-        self.slider.setValue( index_value )      
+        self.slider.setValue( index_value )   
 
-    def getSliderValue( self, slider_value = None ):
+    def getCoordinateValue( self, scaled_slider_value = None ):
+        if scaled_slider_value == None: scaled_slider_value = self.getScaledValue()
+        return self.scaledMinValue + scaled_slider_value * ( self.scaledMaxValue - self.scaledMinValue )
+    
+    def getScaledValue( self, slider_value = None ):
         slider_value = self.slider.value() if not slider_value else slider_value
         fvalue = ( slider_value - self.minValue ) / float( self.maxValue - self.minValue ) 
-        return self.scaledMinValue + fvalue * ( self.scaledMaxValue - self.scaledMinValue )
+        return fvalue
 
     def sliderMoved( self, raw_slider_value ):
-        scaled_slider_value = self.getSliderValue( raw_slider_value )
-        self.value_pane.setText( str( scaled_slider_value ) )
-        self.emit( QtCore.SIGNAL('ConfigCmd'), 'Moved', self.slider_index, ( raw_slider_value, scaled_slider_value ) )
-        return scaled_slider_value
+        scaled_slider_value = self.getScaledValue( raw_slider_value )
+        coordinate_value = self.getCoordinateValue( scaled_slider_value )
+        self.value_pane.setText( str( coordinate_value ) )
+        self.emit( QtCore.SIGNAL('ConfigCmd'), 'Moved', self.slider_index, ( scaled_slider_value, coordinate_value ) )
+        return coordinate_value
     
     def isTracking(self):
         return self.slider.isSliderDown()

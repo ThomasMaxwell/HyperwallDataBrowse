@@ -4,6 +4,47 @@ import types, sip
 
 VTK_BACKGROUND_COLOR = [ 0, 0, 0 ]
 
+AsciiToKeySymTable = ( None, None, None, None, None, None, None,
+                       None, None,
+                       "Tab", None, None, None, None, None, None,
+                       None, None, None, None, None, None,
+                       None, None, None, None, None, None,
+                       None, None, None, None,
+                       "space", "exclam", "quotedbl", "numbersign",
+                       "dollar", "percent", "ampersand", "quoteright",
+                       "parenleft", "parenright", "asterisk", "plus",
+                       "comma", "minus", "period", "slash",
+                       "0", "1", "2", "3", "4", "5", "6", "7",
+                       "8", "9", "colon", "semicolon", "less", "equal",
+                       "greater", "question",
+                       "at", "A", "B", "C", "D", "E", "F", "G",
+                       "H", "I", "J", "K", "L", "M", "N", "O",
+                       "P", "Q", "R", "S", "T", "U", "V", "W",
+                       "X", "Y", "Z", "bracketleft",
+                       "backslash", "bracketright", "asciicircum",
+                       "underscore",
+                       "quoteleft", "a", "b", "c", "d", "e", "f", "g",
+                       "h", "i", "j", "k", "l", "m", "n", "o",
+                       "p", "q", "r", "s", "t", "u", "v", "w",
+                       "x", "y", "z", "braceleft", "bar", "braceright",
+                       "asciitilde", "Delete",
+                       None, None, None, None, None, None, None, None, 
+                       None, None, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None, 
+                       None, None, None, None, None, None, None, None, 
+                       None, None, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None)
+
 def XDestroyWindow(displayId, windowId):
     """ XDestroyWindow(displayId: void_p_str, windowId: void_p_str) -> None
     Destroy the X window specified by two strings displayId and
@@ -802,7 +843,6 @@ class QVTKWidget(QCellWidget):
         Convert ASCII code into key name
         
         """
-        global AsciiToKeySymTable
         return AsciiToKeySymTable[i]
 
     def qt_key_to_key_sym(self,i):

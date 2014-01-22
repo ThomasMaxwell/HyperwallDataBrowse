@@ -5,10 +5,10 @@ Created on Jan 15, 2014
 '''
 
 #from PyQt4 import QtCore, QtGui
-import vtk, sys, traceback, copy, collections, time
-from Utilities import *
+import vtk, sys, traceback, copy, collections
+from Utilities import getItem, getFullPath, isLevelAxis, getVarNDim, newList, getMaxScalarValue, getDatatypeString, getNewVtkDataArray, encodeToString, getStringDataArray 
 import numpy as np
-import numpy.ma as ma
+#import numpy.ma as ma
 # from vtk.util.misc import vtkGetDataRoot
 # packagePath = os.path.dirname( __file__ ) 
 import cdms2, cdtime, cdutil, MV2 
@@ -86,10 +86,10 @@ class CDMSDataType:
     Points = 7
     
     @classmethod
-    def getName( cls, type ):
-        if type == cls.Volume: return "volume"
-        if type == cls.Points: return "points"
-        if type == cls.Vector: return "vector"
+    def getName( cls, dtype ):
+        if dtype == cls.Volume: return "volume"
+        if dtype == cls.Points: return "points"
+        if dtype == cls.Vector: return "vector"
 
 def getTitle( dsid, name, attributes, showUnits=False ):
     long_name = attributes.get( 'long_name', attributes.get( 'standard_name', name ) )
@@ -170,7 +170,7 @@ def designateAxisType( self, axis ):
 def freeImageData( image_data ):
     pointData = image_data.GetPointData()
     for aIndex in range( pointData.GetNumberOfArrays() ):
- #       array = pointData.GetArray( aIndex )
+#       array = pointData.GetArray( aIndex )
         pointData.RemoveArray( aIndex )
 #        if array:
 #            name = pointData.GetArrayName(aIndex)            
@@ -186,8 +186,8 @@ def freeImageData( image_data ):
 
 class CDMSDatasetRecord(): 
    
-    def __init__( self, id, dataset=None, dataFile = None ):
-        self.id = id
+    def __init__( self, ds_id, dataset=None, dataFile = None ):
+        self.id = ds_id
         self.lev = None
         self.dataset = dataset
         self.cdmsFile = dataFile
@@ -236,7 +236,7 @@ class CDMSDatasetRecord():
         refGrid = None
         if referenceVar:
             referenceData = referenceVar.split('*')
-            refDsid = referenceData[0]
+#            refDsid = referenceData[0]
             refFileRelPath = referenceData[1]
             refVar  = referenceData[2]
             try:
@@ -283,7 +283,7 @@ class CDMSDatasetRecord():
                 args1['lat'] = slice( varLatInt[0], varLatInt[1], decimationFactor )
                 print " ---- Decimate(%d) grid %s: varLonInt=%s, varLatInt=%s, lonSlice=%s, latSlice=%s" % ( decimationFactor, str(gridBounds), str(varLonInt), str(varLatInt), str(args1['lon']), str(args1['lat']) )
 #        args1['squeeze'] = 1
-        start_t = time.time() 
+#        start_t = time.time() 
             
 #        if (gridMaker == None) or ( gridMaker.grid == varData.getGrid() ):
                    
@@ -310,7 +310,7 @@ class CDMSDatasetRecord():
 #            max_values = [ regridded_var_slice.max(), rv.max()  ]
 #            print " Regrid variable %s: max values = %s " % ( varName, str(max_values) )
             
-            end_t = time.time() 
+#            end_t = time.time() 
 #            self.cachedFileVariables[ varName ] = ( timeValue, rv )
 #            print  "Reading variable %s, shape = %s, base shape = %s, time = %s (%s), args = %s, slice duration = %.4f sec." % ( varName, str(rv.shape), str(varData.shape), str(timeValue), str(timeValue.tocomp()), str(args1), end_t-start_t  ) 
 #        except Exception, err:
@@ -347,12 +347,12 @@ class CDMSDatasetRecord():
         currentLevel = varData.getLevel()
 #        print "Reading Variable %s, attributes: %s" % ( varName, str(varData.attributes) )
 
-        refFile = self.cdmsFile
+#        refFile = self.cdmsFile
         refVar = varName
         refGrid = None
         if referenceVar:
             referenceData = referenceVar.split('*')
-            refDsid = referenceData[0]
+#            refDsid = referenceData[0]
             relFilePath = referenceData[1]
             refVar  = referenceData[2]
             try:
@@ -413,7 +413,7 @@ class CDMSDatasetRecord():
                 varLatInt = latAxis.mapIntervalExt( latBounds )
                 args1['lat'] = slice( varLatInt[0], varLatInt[1], decimationFactor )
                 
-        start_t = time.time() 
+#        start_t = time.time() 
         
         if ( (referenceVar==None) or ( ( referenceVar[0] == self.cdmsFile ) and ( referenceVar[1] == varName ) ) ) and ( decimationFactor == 1):
             if levBounds <> None:
@@ -450,7 +450,7 @@ class CDMSDatasetRecord():
 #            max_values = [ regridded_var_slice.max(), rv.max()  ]
 #            print " Regrid variable %s: max values = %s " % ( varName, str(max_values) )
             
-            end_t = time.time() 
+#           end_t = time.time() 
 #            self.cachedFileVariables[ varName ] = ( timeValue, rv )
             print  "Reading variable %s, shape = %s, base shape = %s, args = %s" % ( varName, str(rv.shape), str(varData.shape), str(args1) ) 
 #        except Exception, err:
@@ -479,11 +479,11 @@ class CDMSDataset:
     def setCells( self, cells ):
         self.cells[:] = cells[:]
       
-    def setVariableRecord( self, id, varName ):
-        self.variableRecs[id] = varName
+    def setVariableRecord( self, dsid, varName ):
+        self.variableRecs[dsid] = varName
 
-    def getVariableRecord( self, id ):
-        return self.variableRecs[id] 
+    def getVariableRecord( self, dsid ):
+        return self.variableRecs[dsid] 
 
     def getVarRecValues( self ):
         return self.variableRecs.values() 
@@ -663,11 +663,11 @@ class CDMSDataset:
         invert_z = False
         invert_y = False
         levaxis = transVar.getLevel() 
-        timeaxis = transVar.getTime() 
+#        timeaxis = transVar.getTime() 
         level = args.get( 'lev', None )
         lonBounds = args.get( 'lon', None )
         latBounds = args.get( 'lat', None )
-        cell_coords = args.get( 'cell', None )
+#        cell_coords = args.get( 'cell', None )
 
         if levaxis:
             values = levaxis.getValue()
@@ -685,7 +685,7 @@ class CDMSDataset:
 #                return cachedTransVariableRec[ 1 ]
         
         rv = CDMSDataset.NullVariable 
-        currentLevel = transVar.getLevel()
+#        currentLevel = transVar.getLevel()
 #        print "Reading Variable %s, attributes: %s" % ( varName, str(transVar.attributes) )
 
         decimationFactor = 1        
@@ -729,14 +729,14 @@ class CDMSDataset:
         try:
             rv = transVar( **args1 )
         except Exception, err: 
-            print>>sys.stderr, "Error Reading Variable" 
+            print>>sys.stderr, "Error Reading Variable: ", str(err) 
             return CDMSDataset.NullVariable
       
         try: 
             rv = MV2.masked_equal( rv, rv.fill_value )
         except: 
             pass         
- #       self.cachedTransVariables[ varName ] = ( timeValue, rvm )
+#       self.cachedTransVariables[ varName ] = ( timeValue, rvm )
         print  "Reading variable %s, shape = %s, base shape = %s, args = %s" % ( varName, str(rv.shape), str(transVar.shape), str(args1) ) 
         return rv
     
@@ -786,13 +786,13 @@ class CDMSDataset:
         return cdmsDSet             
 
     def getVariableList( self, ndims ):
-        vars = []     
+        vars_list = []     
         for dsetRec in self.datasetRecs.values(): 
             for var in dsetRec.dataset.variables:               
                 vardata = dsetRec.dataset[var]
                 var_ndim = getVarNDim( vardata )
-                if var_ndim == ndims: vars.append( '%s*%s' % ( dsetRec.id, var ) )
-        return vars
+                if var_ndim == ndims: vars_list.append( '%s*%s' % ( dsetRec.id, var ) )
+        return vars_list
     
     def getDsetId(self): 
         rv = '-'.join( self.datasetRecs.keys() )
@@ -1015,64 +1015,64 @@ class ImageDataReader:
     def setCurrentLevel(self, level ): 
         self.currentLevel = level
 
-    def getFileMetadata( self, orec, **args ):
-        varList = orec.varList
-        if len( varList ) == 0: return False
-        varDataIds = []
-        intersectedRoi = args.get('roi', None )
-        url = args.get('url', None )
-        if intersectedRoi: self.cdmsDataset.setRoi( intersectedRoi )
-        dsid = None
-        vars = []
-        for varRec in varList:
-            range_min, range_max, scale, shift  = 0.0, 0.0, 1.0, 0.0   
-            imageDataName = getItem( varRec )
-            varNameComponents = imageDataName.split('*')
-            if len( varNameComponents ) == 1:
-                dsid = self.cdmsDataset.getReferenceDsetId() 
-                varName = varNameComponents[0]
-            else:
-                dsid = varNameComponents[0]
-                varName = varNameComponents[1]
-            ds = self.cdmsDataset[ dsid ]
-            if ds:
-                var = ds.getVariable( varName )
-                self.setupTimeAxis( var, **args )
-            portName = orec.name
-            selectedLevel = orec.getSelectedLevel() if ( self.currentLevel == None ) else self.currentLevel
-            ndim = 3 if ( orec.ndim == 4 ) else orec.ndim
-            default_dtype = np.float32
-            scalar_dtype = args.get( "dtype", default_dtype )
-            self._max_scalar_value = getMaxScalarValue( scalar_dtype )
-            self._range = [ 0.0, self._max_scalar_value ]  
-            datatype = getDatatypeString( scalar_dtype )
-            if (self.outputType == CDMSDataType.Hoffmuller):
-                if ( selectedLevel == None ):
-                    varDataIdIndex = 0
-                else:
-                    varDataIdIndex = selectedLevel  
-                                      
-            iTimestep = self.timeIndex if ( varName <> '__zeros__' ) else 0
-            varDataIdIndex = iTimestep  
-            roiStr = ":".join( [ ( "%.1f" % self.cdmsDataset.gridBounds[i] ) for i in range(4) ] ) if self.cdmsDataset.gridBounds else ""
-            varDataId = '%s;%s;%d;%s;%s' % ( dsid, varName, self.outputType, str(varDataIdIndex), roiStr )
-            vmd = {}         
-            vmd[ 'dsid' ] = dsid 
-            vmd[ 'file' ] = url if url else dsid              
-            vmd[ 'varName' ] = varName                 
-            vmd[ 'outputType' ] = self.outputType                 
-            vmd[ 'varDataIdIndex' ] = varDataIdIndex
-            vmd['datatype'] = datatype
-            vmd['timeIndex']= iTimestep
-            vmd['timeValue']= self.timeValue.value
-            vmd['latLonGrid']= self.cdmsDataset.latLonGrid
-            vmd['timeUnits' ] = self.referenceTimeUnits 
-            vmd[ 'bounds' ] = self.cdmsDataset.gridBounds          
-            enc_mdata = encodeToString( vmd ) 
-            if enc_mdata and fieldData: 
-                fieldData.AddArray( getStringDataArray( 'metadata:%s' % varName,   [ enc_mdata ]  ) ) 
-                vars.append( varName )                   
-        fieldData.AddArray( getStringDataArray( 'varlist',  vars  ) )                       
+#     def getFileMetadata( self, orec, **args ):
+#         varList = orec.varList
+#         if len( varList ) == 0: return False
+#         varDataIds = []
+#         intersectedRoi = args.get('roi', None )
+#         url = args.get('url', None )
+#         if intersectedRoi: self.cdmsDataset.setRoi( intersectedRoi )
+#         dsid = None
+#         vars = []
+#         for varRec in varList:
+#             range_min, range_max, scale, shift  = 0.0, 0.0, 1.0, 0.0   
+#             imageDataName = getItem( varRec )
+#             varNameComponents = imageDataName.split('*')
+#             if len( varNameComponents ) == 1:
+#                 dsid = self.cdmsDataset.getReferenceDsetId() 
+#                 varName = varNameComponents[0]
+#             else:
+#                 dsid = varNameComponents[0]
+#                 varName = varNameComponents[1]
+#             ds = self.cdmsDataset[ dsid ]
+#             if ds:
+#                 var = ds.getVariable( varName )
+#                 self.setupTimeAxis( var, **args )
+#             portName = orec.name
+#             selectedLevel = orec.getSelectedLevel() if ( self.currentLevel == None ) else self.currentLevel
+#             ndim = 3 if ( orec.ndim == 4 ) else orec.ndim
+#             default_dtype = np.float32
+#             scalar_dtype = args.get( "dtype", default_dtype )
+#             self._max_scalar_value = getMaxScalarValue( scalar_dtype )
+#             self._range = [ 0.0, self._max_scalar_value ]  
+#             datatype = getDatatypeString( scalar_dtype )
+#             if (self.outputType == CDMSDataType.Hoffmuller):
+#                 if ( selectedLevel == None ):
+#                     varDataIdIndex = 0
+#                 else:
+#                     varDataIdIndex = selectedLevel  
+#                                       
+#             iTimestep = self.timeIndex if ( varName <> '__zeros__' ) else 0
+#             varDataIdIndex = iTimestep  
+#             roiStr = ":".join( [ ( "%.1f" % self.cdmsDataset.gridBounds[i] ) for i in range(4) ] ) if self.cdmsDataset.gridBounds else ""
+#             varDataId = '%s;%s;%d;%s;%s' % ( dsid, varName, self.outputType, str(varDataIdIndex), roiStr )
+#             vmd = {}         
+#             vmd[ 'dsid' ] = dsid 
+#             vmd[ 'file' ] = url if url else dsid              
+#             vmd[ 'varName' ] = varName                 
+#             vmd[ 'outputType' ] = self.outputType                 
+#             vmd[ 'varDataIdIndex' ] = varDataIdIndex
+#             vmd['datatype'] = datatype
+#             vmd['timeIndex']= iTimestep
+#             vmd['timeValue']= self.timeValue.value
+#             vmd['latLonGrid']= self.cdmsDataset.latLonGrid
+#             vmd['timeUnits' ] = self.referenceTimeUnits 
+#             vmd[ 'bounds' ] = self.cdmsDataset.gridBounds          
+#             enc_mdata = encodeToString( vmd ) 
+#             if enc_mdata and fieldData: 
+#                 fieldData.AddArray( getStringDataArray( 'metadata:%s' % varName,   [ enc_mdata ]  ) ) 
+#                 vars.append( varName )                   
+#         fieldData.AddArray( getStringDataArray( 'varlist',  vars  ) )                       
 
     def getAxisValues( self, axis, roi ):
         values = axis.getValue()
@@ -1139,7 +1139,7 @@ class ImageDataReader:
             return current_roi
        
     def getGridSpecs( self, var, roi, zscale, outputType, dset ):   
-        dims = var.getAxisIds()
+#        dims = var.getAxisIds()
         gridOrigin = newList( 3, 0.0 )
         outputOrigin = newList( 3, 0.0 )
         gridBounds = newList( 6, 0.0 )
@@ -1148,10 +1148,10 @@ class ImageDataReader:
         outputExtent = newList( 6, 0 )
         gridShape = newList( 3, 0 )  
         gridSize = 1
-        domain = var.getDomain()
+#        domain = var.getDomain()
         self.lev = var.getLevel()
         axis_list = var.getAxisList()
-        isCurvilinear = False
+#        isCurvilinear = False
         for axis in axis_list:
             size = len( axis )
             iCoord = self.getCoordType( axis, outputType )
@@ -1253,7 +1253,7 @@ class ImageDataReader:
             if ds:
                 var = ds.getVariable( varName )
                 self.setupTimeAxis( var, **args )
-            portName = orec.name
+#            portName = orec.name
             selectedLevel = orec.getSelectedLevel() if ( self.currentLevel == None ) else self.currentLevel
             ndim = 3 if ( orec.ndim == 4 ) else orec.ndim
             default_dtype = np.float32
@@ -1273,7 +1273,7 @@ class ImageDataReader:
             varDataId = '%s;%s;%d;%s;%s' % ( dsid, varName, self.outputType, str(varDataIdIndex), roiStr )
             varDataIds.append( varDataId )
             varDataSpecs = self.getCachedData( varDataId, self.rank ) 
-            flatArray = None
+#            flatArray = None
             if varDataSpecs == None:
                 if varName == '__zeros__':
                     assert( npts > 0 )
@@ -1345,14 +1345,14 @@ class ImageDataReader:
             self.setCachedImageData( cachedImageDataName, self.rank, image_data )
             
         fieldData = image_data.GetFieldData()        
-        nVars = len( varList )
+#        nVars = len( varList )
 #        npts = image_data.GetNumberOfPoints()
         pointData = image_data.GetPointData()
         for aname in range( pointData.GetNumberOfArrays() ): 
             pointData.RemoveArray( pointData.GetArrayName(aname) )
         extent = image_data.GetExtent()    
         scalars, nTup = None, 0
-        vars = [] 
+        vars_list = [] 
         for varDataId in varDataIds:
             try: 
                 varDataSpecs = self.getCachedData( varDataId, self.rank )   
@@ -1361,7 +1361,7 @@ class ImageDataReader:
                 varName = varDataId.split(';')[1]
                 var_md = md[ 'attributes' ]            
                 if newDataArray <> None:
-                    vars.append( varName ) 
+                    vars_list.append( varName ) 
                     md[ 'valueRange'] = var_md[ 'range' ] 
                     vtkdata = getNewVtkDataArray( scalar_dtype )
                     nTup = newDataArray.size
@@ -1390,9 +1390,9 @@ class ImageDataReader:
                 iComp = 0
                 for varName in vars:
                     fromArray =  pointData.GetArray( varName )
-                    fromNTup = fromArray.GetNumberOfTuples()
-                    tup0 = fromArray.GetValue(0)
-                    toNTup = vtkdata.GetNumberOfTuples()
+#                    fromNTup = fromArray.GetNumberOfTuples()
+#                    tup0 = fromArray.GetValue(0)
+#                    toNTup = vtkdata.GetNumberOfTuples()
                     vtkdata.CopyComponent( iComp, fromArray, 0 )
                     if iComp == 0: 
                         md[ 'scalars'] = varName 
@@ -1415,10 +1415,9 @@ class ImageDataReader:
                     vmd[ 'title' ] = getTitle( dsid, varName, var_md )                   
                     enc_mdata = encodeToString( vmd ) 
                     if enc_mdata and fieldData: fieldData.AddArray( getStringDataArray( 'metadata:%s' % varName,   [ enc_mdata ]  ) ) 
-            if enc_mdata and fieldData: fieldData.AddArray( getStringDataArray( 'varlist',  vars  ) )                         
+            if enc_mdata and fieldData: fieldData.AddArray( ( 'varlist',  vars  ) )                         
             image_data.Modified()
         except Exception, err:
             print>>sys.stderr, "Error encoding variable metadata: %s " % str(err)
             traceback.print_exc()
         return cachedImageDataName
-

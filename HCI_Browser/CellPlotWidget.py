@@ -3,12 +3,14 @@ Created on Jan 13, 2014
 
 @author: tpmaxwel
 '''
-from PyQt4 import QtCore, QtGui
+from PyQt4 import QtGui
 import sys, vtk, os, cdms2
+import vtk.util.vtkImageImportFromArray as vtkUtil
 from ClusterCommunicator import control_message_signal
 from NcImageDataReader import CDMSDataset, ImageDataReader
 from ColormapManager import ColorMapManager
 from vtkQtIntegration import QVTKClientWidget, VTK_BACKGROUND_COLOR
+from ImageDataSlicer import DataSlicer
 
 VTK_NEAREST_RESLICE = 0
 VTK_LINEAR_RESLICE  = 1
@@ -31,7 +33,8 @@ class CellPlotWidget( QtGui.QWidget ):
         self.filepath = None
         self.varname = None
         self.roi = None
-        self.imageData = None
+        self.iTimeIndex = 0
+#        self.ResliceAxes   = vtk.vtkMatrix4x4()   
         if self.comm: 
             self.comm.connect( hcomm, control_message_signal, self.processConfigCmd )
             self.comm.start()
@@ -59,12 +62,11 @@ class CellPlotWidget( QtGui.QWidget ):
             slice_index = int( msg.get( 'index', -1 ) )
             if cmd == 'Moved':
                 values = msg.get( 'values', None )
-                sval = float( values[1] ) if values else None
-                self.plotSlice( slice_index, sval )
-                
-    def plotSlice(self, slice_index, slice_pos ):
-        print "Plotting Slice[%d]: %.2f" % ( slice_index, slice_pos )
-                
+                if values:
+                    print " Slider Moved: %s " % str( values )
+#                sval = float( values[0] ) if values else None
+                    self.positionSlice( slice_index, values[0], values[1] )
+                                
     def processConfigData( self, config_data ):   
         global_config = config_data.get('global', None )
         if global_config:
@@ -87,23 +89,32 @@ class CellPlotWidget( QtGui.QWidget ):
                     filename = dset_data.get( 'file', None )
                     self.dset_id = dset_data.get( 'id', dset )
                     self.filepath = filename if ( self.dir == None ) else os.path.join( self.dir, filename )
+                    self.dataSlicer = DataSlicer( self.filepath, self.varname )
+                    self.positionSlice( 0, 0.5, 180.0 )
                 else: print>>sys.stderr, "Error, no dataset declared for cell %d " % iproc
-            self.initData()
+#            self.initData()
             
-    def initData(self):
-        self.dset = CDMSDataset() 
-        if self.dset_id:
-            varSpec = "%s*%s" % ( self.dset_id, self.varname )
-            self.dset.setVariableRecord( "VariableName0", varSpec )
-            self.dset.addDatasetRecord( self.dset_id, self.filepath )
-            self.dset.setReferenceVariable( varSpec )
-            self.reader = ImageDataReader( self.comm.rank )
-            self.reader.execute( self.dset )
-            print "Read Image Data: %s " % str( self.reader.result.keys() )
-            self.imageData = self.reader.result.get( 'volume', None )
-            if self.imageData: self.Reslice.SetInput( self.imageData )
+#     def initData(self):
+#         self.dset = CDMSDataset() 
+#         if self.dset_id:
+#             varSpec = "%s*%s" % ( self.dset_id, self.varname )
+#             self.dset.setVariableRecord( "VariableName0", varSpec )
+#             self.dset.addDatasetRecord( self.dset_id, self.filepath )
+#             self.dset.setReferenceVariable( varSpec )
+#             self.reader = ImageDataReader( self.comm.rank )
+#             self.reader.execute( self.dset )
+#             print "Read Image Data: %s " % str( self.reader.result.keys() )
+#             self.imageData = self.reader.result.get( 'volume', None )
+#             if self.imageData: self.Reslice.SetInput( self.imageData )
 
-         
+    def positionSlice( self, iAxis, slider_pos, coord_value ):
+        print "Plotting Slice[%d]: %.2f %.2f" % ( iAxis, slider_pos, coord_value )
+        self.slicedImageData =  self.dataSlicer.getSlice( iAxis, self.iTimeIndex, slider_pos, coord_value ) 
+        if  self.slicedImageData <> None:      
+            self.vtkImageImporter.SetArray( self.slicedImageData )
+            self.vtkImageImporter.Update()        
+            self.renWin.Render()     
+     
     def buildCanvas(self):
         if self.cellWidget <> None: return
         top_level_layout = QtGui.QVBoxLayout() 
@@ -120,11 +131,11 @@ class CellPlotWidget( QtGui.QWidget ):
  
         self.UserControlledLookupTable = False
         self.ColorMap = vtk.vtkImageMapToColors()
-        self.Reslice = vtk.vtkImageReslice()
-        self.Reslice.TransformInputSamplingOff() 
-        self.Reslice.SetOutputDimensionality(2)  
-        self.Reslice.SetResliceAxesOrigin( 0, 0, 0 )
-        self.Reslice.SetResliceAxesDirectionCosines( 1, 0, 0, 0, 1, 0, 0, 0, 1 )  
+#         self.Reslice = vtk.vtkImageReslice()
+#         self.Reslice.TransformInputSamplingOff() 
+#         self.Reslice.SetOutputDimensionality(2)  
+#         self.Reslice.SetResliceAxesOrigin( 0, 0, 0 )
+#         self.Reslice.SetResliceAxesDirectionCosines( 1, 0, 0, 0, 1, 0, 0, 0, 1 )  
         
         self.LookupTable = vtk.vtkLookupTable()
         self.colorMapManager = ColorMapManager( self.LookupTable ) 
@@ -133,6 +144,9 @@ class CellPlotWidget( QtGui.QWidget ):
         self.ColorMap.SetLookupTable(self.LookupTable)
         self.ColorMap.SetOutputFormatToRGBA()
         self.ColorMap.PassAlphaToOutputOn()
+
+        self.vtkImageImporter = vtkUtil.vtkImageImportFromArray()
+        self.ColorMap.SetInput( self.vtkImageImporter.GetOutput() )  
 
         psize = [ 400.0, 400.0  ] 
         pbounds = [ 0.0, psize[0], 0.0, psize[1] ]  
@@ -167,8 +181,7 @@ class CellPlotWidget( QtGui.QWidget ):
 #             self.LookupTable.SetTableRange( scalar_range[0], scalar_range[1] )
 #             self.LookupTable.Build()   
                  
-        self.Reslice.Modified()                
-        self.ColorMap.SetInput(self.Reslice.GetOutput())       
+#        self.Reslice.Modified()                
         self.Texture.SetInput(self.ColorMap.GetOutput())
         self.Texture.SetInterpolate(self.TextureInterpolate)
  

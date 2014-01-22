@@ -7,8 +7,8 @@ from PyQt4 import QtCore, QtGui
 import ClusterCommunicator
 from SliceWidget import SliceWidgetWindow
 from CellPlotWidget import CellPlotWidgetWindow
-import sys, os
-from Utilities import *
+import os, sys
+from Utilities import isList
 
 class ConfigFileParser( QtCore.QObject ):
     

@@ -102,9 +102,9 @@ class ColorMapManager():
     def getDisplayRange( self ):
         return self.display_lut.GetTableRange()
 
-    def matchDisplayRange( self, range ):
+    def matchDisplayRange( self, drange ):
         trange = self.display_lut.GetTableRange()
-        return ( trange[0] == range[0] ) and ( trange[1] == range[1] )
+        return ( trange[0] == drange[0] ) and ( trange[1] == drange[1] )
    
     def set_lut(self, vtk_lut, lut_lst):
         """Setup the vtkLookupTable (`vtk_lut`) using the passed list of
@@ -138,17 +138,16 @@ class ColorMapManager():
         """Parse the file specified by its name `file_name` for a LUT and
         return the list of parsed values."""
         
-        input = open(file_name, "r")
+        cmap_input = open(file_name, "r")
     
-        line = input.readline()
-        n_color = self.check_lut_first_line(line, file_name)
+#        line = cmap_input.readline()
+#        n_color = self.check_lut_first_line(line, file_name)
     
         lut = []
-        for line in input.readlines():
+        for line in cmap_input.readlines():
             entr = line.split()
             if len(entr) != 4:
-                errmsg="Error: insufficient or too much data in line "\
-                        "-- \"%s\""%(entr)
+                errmsg="Error: insufficient or too much data in line -- \"%s\""%(entr)
                 raise IOError, errmsg
     
             tmp = []
@@ -183,8 +182,8 @@ class ColorMapManager():
                         lut_list.reverse()
                     self.lut = self.set_lut(self.lut, lut_list)
                     
-    def load_lut_from_list(self, list):
-        self.set_lut(self.lut, list) 
+    def load_lut_from_list(self, ilist):
+        self.set_lut(self.lut, ilist) 
         self.lut.Modified()  
         
     def getColor( self, dval ):
@@ -249,8 +248,8 @@ class ColorMapManager():
         self.display_lut.Modified()
                   
 if __name__ == '__main__':  
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+#    from PyQt4.QtCore import *
+    from PyQt4.QtGui import QApplication
     
 #    new_colormaps = {}
 #    for colormapName in colormaps:
@@ -287,5 +286,3 @@ if __name__ == '__main__':
     iren.Start()
     
     app.exec_()   
-
- 
