@@ -6,7 +6,7 @@ Created on Jan 21, 2014
 
 import matplotlib.pyplot as plt
 from PyQt4 import QtCore, QtGui
-import sys, os, cdms2, random, time
+import sys, os, cdms2, random, time, cdtime
 from matplotlib.backends.backend_qt4agg import FigureCanvasAgg, FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure, SubplotParams
 
@@ -184,21 +184,22 @@ class mplSlicePlot(FigureCanvas):
         if plot_index == 0: 
             self.xcoord = self.var.getLatitude()
             self.ycoord = self.var.getLevel()
-            slice_coord_name = "Longitude"
+            annotation = "Longitude = %.1f" % ( coord_value )
         if plot_index == 1: 
             self.xcoord = self.var.getLongitude()
             self.ycoord = self.var.getLevel()
-            slice_coord_name = "Latitude"
+            annotation = "Latitude = %.1f" % ( coord_value )
         if plot_index == 2: 
             self.ycoord = self.var.getLatitude()
             self.xcoord = self.var.getLongitude()
-            slice_coord_name = "Level"
+            annotation = "Level = %.1f" % ( coord_value )
         if plot_index == 3: 
-            slice_coord_name = "Time"
+            time_axis = self.var.getTime()
+            r = cdtime.reltime( coord_value, time_axis.units )
+            annotation = "Time = %s" % str( r.tocomp() )
         self.data = slice_data
-        refresh_axes = self.current_plot_index <> plot_index
+        refresh_axes = ( self.current_plot_index <> plot_index ) and ( plot_index <> 3 )
         self.current_plot_index = plot_index 
-        annotation = "%s = %.1f" % ( slice_coord_name, coord_value )
         self.update_figure( refresh_axes, annotation )
 
 class qtApplicationWindow(QtGui.QMainWindow):

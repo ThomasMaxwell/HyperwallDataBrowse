@@ -74,7 +74,7 @@ class DataSlicer( QtCore.QObject ):
                 if hasDataCube:     dataslice = dataCube[ iVal, :, : ]
                 else:               dataslice = self.var( time=slice(iTime,iTime+1), level = slice(iVal0,iVal1), order ='yx'  ) 
         except cdms2.error.CDMSError, err:
-            print>>sys.stderr, "Error getting slice[%d] (%.2f): %s " % ( iAxis, coord_value, str(err) )
+            print>>sys.stderr, "Error getting slice[%d] (%s): %s " % ( iAxis, str(coord_value), str(err) )
             return None
         
         if ( iAxis <> 3 ): 
