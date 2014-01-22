@@ -1015,6 +1015,7 @@ class ImageDataReader:
     def setCurrentLevel(self, level ): 
         self.currentLevel = level
 
+
 #     def getFileMetadata( self, orec, **args ):
 #         varList = orec.varList
 #         if len( varList ) == 0: return False
@@ -1073,6 +1074,7 @@ class ImageDataReader:
 #                 fieldData.AddArray( getStringDataArray( 'metadata:%s' % varName,   [ enc_mdata ]  ) ) 
 #                 vars.append( varName )                   
 #         fieldData.AddArray( getStringDataArray( 'varlist',  vars  ) )                       
+
 
     def getAxisValues( self, axis, roi ):
         values = axis.getValue()
