@@ -7,7 +7,7 @@ Created on Jan 21, 2014
 import matplotlib.pyplot as plt
 from PyQt4 import QtCore, QtGui
 import sys, os, cdms2, random, time
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt4agg import FigureCanvasAgg, FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure, SubplotParams
 
 progversion = "0.1"
@@ -168,9 +168,11 @@ class mplSlicePlot(FigureCanvas):
                 self.setAxisLabels()
                 self.annotation_box = None
             else:
+                print "Plot: ", label
                 self.plot.set_array(self.data)
             if label: self.showAnnotation( label )
-            self.draw()
+            FigureCanvasAgg.draw(self)
+            self.repaint()
 
     def setVariable( self, var ):
         self.var = var
