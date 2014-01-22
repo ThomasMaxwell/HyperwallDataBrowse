@@ -30,8 +30,7 @@ class CellPlotWidget( QtGui.QWidget ):
         self.cellWidget = None
         self.filepath = None
         self.varname = None
-        self.roi = None
-        self.iTimeIndex = 0  
+        self.roi = None 
         if self.comm: 
             self.comm.connect( hcomm, control_message_signal, self.processConfigCmd )
             self.comm.start()
@@ -83,7 +82,7 @@ class CellPlotWidget( QtGui.QWidget ):
                 else: print>>sys.stderr, "Error, no dataset declared for cell %d " % iproc
 
     def positionSlice( self, iAxis, slider_pos, coord_value ):
-        dataSlice = self.dataSlicer.getSlice( iAxis, self.iTimeIndex, slider_pos, coord_value )          
+        dataSlice = self.dataSlicer.getSlice( iAxis, slider_pos, coord_value )          
         if id(dataSlice) <> id(None):
             self.slicedImageData =  dataSlice     
             self.cellWidget.plotSlice( iAxis, self.slicedImageData, coord_value )   

@@ -193,6 +193,8 @@ class mplSlicePlot(FigureCanvas):
             self.ycoord = self.var.getLatitude()
             self.xcoord = self.var.getLongitude()
             slice_coord_name = "Level"
+        if plot_index == 3: 
+            slice_coord_name = "Time"
         self.data = slice_data
         refresh_axes = self.current_plot_index <> plot_index
         self.current_plot_index = plot_index 
