@@ -6,7 +6,7 @@ Created on Jan 15, 2014
 
 #from PyQt4 import QtCore, QtGui
 import vtk, sys, traceback, copy, collections
-from Utilities import getItem, getFullPath, isLevelAxis, getVarNDim, newList, getMaxScalarValue, getDatatypeString, getNewVtkDataArray, encodeToString, getStringDataArray 
+from HCI_Browser.Utilities import getItem, getFullPath, isLevelAxis, getVarNDim, newList, getMaxScalarValue, getDatatypeString, getNewVtkDataArray, encodeToString, getStringDataArray 
 import numpy as np
 #import numpy.ma as ma
 # from vtk.util.misc import vtkGetDataRoot

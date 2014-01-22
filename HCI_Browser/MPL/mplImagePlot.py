@@ -6,7 +6,7 @@ Created on Jan 21, 2014
 
 import matplotlib.pyplot as plt
 from PyQt4 import QtCore, QtGui
-import sys, os, cdms2, random
+import sys, os, cdms2, random, time
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure, SubplotParams
 
@@ -41,11 +41,11 @@ def getAxisLabel( coord_axis ):
 class mplSlicePlot(FigureCanvas):
 
     def __init__(self, parent, *args, **kwargs):
-        fig = Figure( subplotpars=SubplotParams(left=0.05, right=0.95, bottom=0.05, top=0.95 ) )
-        self.axes = fig.add_subplot(111)    
+        self.fig = Figure( subplotpars=SubplotParams(left=0.05, right=0.95, bottom=0.05, top=0.95 ) )
+        self.axes = self.fig.add_subplot(111)    
         self.axes.hold(False)                   # We want the axes cleared every time plot() is called    
         self.compute_initial_figure()
-        FigureCanvas.__init__(self, fig)
+        FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
         FigureCanvas.setSizePolicy(self, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
@@ -54,12 +54,20 @@ class mplSlicePlot(FigureCanvas):
             self.timer = QtCore.QTimer(self)
             QtCore.QObject.connect(self.timer, QtCore.SIGNAL("timeout()"), self.update_figure)
             self.timer.start(1000)
+        self.vrange = [ None, None ]
         self.parms = {}
-        self.parms[ 'filterrad' ] = 4.0
+        self.parms.update( kwargs )
         self.plot = None
+        self.cbar = None
+        self.zscale = 3
+        self.current_plot_index = -1
+        self.annotation_box = None
         
     def param(self, pname, defval = None ):
         return self.parms.get( pname, defval )
+
+    def set_param(self, pname, val ):
+        self.parms[ pname ] = val
         
 
 #        self.cmap = None
@@ -67,7 +75,7 @@ class mplSlicePlot(FigureCanvas):
 #        self.aspect = None
 #        self.interpolation = None
 #        self.alpha = None
-#        self.vrange = [ None, None ]
+#        
 #        self.origin = None
 #        self.extent = None
 #        self.shape = None
@@ -78,16 +86,11 @@ class mplSlicePlot(FigureCanvas):
 #        self.url = None
 
     def initCanvas( self, parent ): 
+        pass
 #        fig = Figure(figsize=(width, height), dpi=dpi) # , width=5, height=4, dpi=100, **kwargs):
 
     def compute_initial_figure(self):
-        pass
-
-    def update_figure(self):   
         pass   
-    
-    def compute_initial_figure(self):  
-        pass
     
     def setTicks( self, iaxis, nticks ):
         axis_vals = self.xcoord.getValue() if ( iaxis == 0 ) else self.ycoord.getValue()
@@ -133,22 +136,40 @@ class mplSlicePlot(FigureCanvas):
         self.axes.set_ylabel( getAxisLabel( self.ycoord ), fontdict=axis_font )
         
     def createColorbar( self, **args ):
-        shrink_factor = args.get( 'shrink', 1.0 )
-        self.cbar = self.figure.colorbar( self.plot, shrink=shrink_factor ) 
-        try: self.cbar.set_label( self.var.units )
-        except: pass
+        if self.cbar == None:
+            shrink_factor = args.get( 'shrink', 0.5 )
+            self.cbar = self.figure.colorbar( self.plot, shrink=shrink_factor ) 
+            try: self.cbar.set_label( self.var.units )
+            except: pass
+            
+    def setZScale( self, zscale ):
+        if self.zscale <> zscale:
+            self.zscale = zscale
+            self.update_figure( True )
+     
+    def showAnnotation( self, textstr ): 
+        if self.annotation_box == None:     
+            props = dict( boxstyle='round', facecolor='wheat', alpha=0.5 )
+            self.annotation_box = self.axes.text( 0.05, 0.95, textstr, transform=self.fig.transFigure, fontsize=14, verticalalignment='top', bbox=props)
+        else:
+            self.annotation_box.set_text( textstr )
                 
-    def update_figure( self, **kwargs ):    # Override in subclass
+    def update_figure( self, refresh = True, label=None, **kwargs ):    
         if self.data <> None:
-            self.plot = self.axes.imshow( self.data, cmap=self.cmap, norm=self.norm, aspect=self.aspect, interpolation=self.interpolation, alpha=self.alpha, vmin=self.vrange[0],
-                        vmax=self.vrange[1], origin=self.origin, extent=self.extent, shape=self.shape, filternorm=self.filternorm, filterrad=self.filterrad,
-                        imlim=self.imlim, resample=self.resample, url=self.url, **kwargs)
-            self.setTicks( 0, 5 )
-            self.setTicks( 1, 5 )
-            self.setTitle()
-            if self.ycoord.isLevel():  self.axes.set_aspect( 'auto', 'box' )
-            self.createColorbar()
-            self.setAxisLabels()
+            if refresh:
+                self.plot = self.axes.imshow( self.data, cmap=self.param('cmap'), norm=self.param('norm'), aspect=self.param('aspect'), interpolation=self.param('interpolation'), alpha=self.param('self.alpha'), vmin=self.vrange[0],
+                            vmax=self.vrange[1], origin=self.param('origin'), extent=self.param('extent'), shape=self.param('shape'), filternorm=self.param('filternorm'), filterrad=self.param('filterrad',4.0),
+                            imlim=self.param('imlim'), resample=self.param('resample'), url=self.param('url'), **kwargs)
+                self.setTicks( 0, 5 )
+                self.setTicks( 1, 5 )
+                self.setTitle()
+                if self.ycoord.isLevel():  self.axes.set_aspect( self.zscale, 'box') 
+                self.createColorbar()
+                self.setAxisLabels()
+                self.annotation_box = None
+            else:
+                self.plot.set_array(self.data)
+            if label: self.showAnnotation( label )
             self.draw()
 
     def setVariable( self, var ):
@@ -157,21 +178,25 @@ class mplSlicePlot(FigureCanvas):
     def setColormap( self, cmap ):
         self.plot.set_cmap( cmap )
         
-    def generateSlice( self, plot_index, slider_value ):
+
+    def plotSlice( self, plot_index, slice_data, coord_value ):
         if plot_index == 0: 
-            slice_tvar = self.var( time = slice(0,1), longitude=slice(0,1), order="zy" )
             self.xcoord = self.var.getLatitude()
             self.ycoord = self.var.getLevel()
+            slice_coord_name = "Longitude"
         if plot_index == 1: 
-            slice_tvar = self.var( time = slice(0,1), latitude=slice(0,1), order="zx" )
             self.xcoord = self.var.getLongitude()
             self.ycoord = self.var.getLevel()
+            slice_coord_name = "Latitude"
         if plot_index == 2: 
-            slice_tvar = self.var( time = slice(0,1), level=slice(0,1), order="yx" )
             self.ycoord = self.var.getLatitude()
             self.xcoord = self.var.getLongitude()
-        self.data = slice_tvar.data.squeeze()
-        self.update_figure()
+            slice_coord_name = "Level"
+        self.data = slice_data
+        refresh_axes = self.current_plot_index <> plot_index
+        self.current_plot_index = plot_index 
+        annotation = "%s = %.1f" % ( slice_coord_name, coord_value )
+        self.update_figure( refresh_axes, annotation )
 
 class qtApplicationWindow(QtGui.QMainWindow):
     
@@ -194,7 +219,7 @@ class qtApplicationWindow(QtGui.QMainWindow):
         
     def generateContent( self, **args ): 
         l = QtGui.QVBoxLayout(self.main_widget)
-        self.plot = mplImagePlot( self.main_widget )
+        self.plot = mplSlicePlot( self.main_widget )
         l.addWidget( self.plot )
         
     def generateSlice( self, plot_index, slider_value ):

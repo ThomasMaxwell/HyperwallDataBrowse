@@ -39,6 +39,7 @@ class LabeledSliderWidget( QtGui.QWidget ):
         fvalue = ( self.scaledInitValue - self.scaledMinValue ) / float( self.scaledMaxValue - self.scaledMinValue )
         self.initValue = int( round( self.minValue + fvalue * ( self.maxValue - self.minValue ) ) )
         self.slider.setValue( int( self.initValue ) )
+        self.current_slider_pos = self.initValue
         self.connect( self.slider, QtCore.SIGNAL('sliderMoved(int)'), self.sliderMoved )
         self.connect( self.slider, QtCore.SIGNAL('sliderPressed()'), self.configStart )
         self.connect( self.slider, QtCore.SIGNAL('sliderReleased()'), self.configEnd )
@@ -89,10 +90,13 @@ class LabeledSliderWidget( QtGui.QWidget ):
         return fvalue
 
     def sliderMoved( self, raw_slider_value ):
-        scaled_slider_value = self.getScaledValue( raw_slider_value )
-        coordinate_value = self.getCoordinateValue( scaled_slider_value )
-        self.value_pane.setText( str( coordinate_value ) )
-        self.emit( QtCore.SIGNAL('ConfigCmd'), 'Moved', self.slider_index, ( scaled_slider_value, coordinate_value ) )
+        coordinate_value = None
+        if self.current_slider_pos <> raw_slider_value:
+            scaled_slider_value = self.getScaledValue( raw_slider_value )
+            coordinate_value = self.getCoordinateValue( scaled_slider_value )
+            self.value_pane.setText( str( coordinate_value ) )
+            self.emit( QtCore.SIGNAL('ConfigCmd'), 'Moved', self.slider_index, ( scaled_slider_value, coordinate_value ) )
+            self.current_slider_pos = raw_slider_value
         return coordinate_value
     
     def isTracking(self):
