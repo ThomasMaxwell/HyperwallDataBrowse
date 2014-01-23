@@ -40,7 +40,7 @@ class LabeledSliderWidget( QtGui.QWidget ):
         self.initValue = int( round( self.minValue + fvalue * ( self.maxValue - self.minValue ) ) )
         self.slider.setValue( int( self.initValue ) )
         self.current_slider_pos = self.initValue
-        self.connect( self.slider, QtCore.SIGNAL('sliderMoved(int)'), self.sliderMoved )
+        self.connect( self.slider, QtCore.SIGNAL('valueChanged(int)'), self.sliderMoved )
         self.connect( self.slider, QtCore.SIGNAL('sliderPressed()'), self.configStart )
         self.connect( self.slider, QtCore.SIGNAL('sliderReleased()'), self.configEnd )
         slider_label.setBuddy( self.slider )

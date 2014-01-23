@@ -6,12 +6,19 @@ Created on Jan 21, 2014
 
 import matplotlib.pyplot as plt
 from PyQt4 import QtCore, QtGui
-import sys, os, cdms2, random, time, cdtime
+import sys, os, cdms2, random, time, cdtime, ctypes, traceback
 from matplotlib.backends.backend_qt4agg import FigureCanvasAgg, FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure, SubplotParams
 
+_decref = ctypes.pythonapi.Py_DecRef
+_decref.argtypes = [ctypes.py_object]
+_decref.restype = None
+
 progversion = "0.1"
 progname = "Hyperwall Cell Plot"
+
+qtversion = str( QtCore.qVersion() )
+isQt4 = ( qtversion[0] == '4' )
 
 cmaps = [('Sequential',     ['binary', 'Blues', 'BuGn', 'BuPu', 'gist_yarg',
                              'GnBu', 'Greens', 'Greys', 'Oranges', 'OrRd',
@@ -65,7 +72,7 @@ class mplSlicePlot(FigureCanvas):
         self.grid_annotation = None
         self.time_annotation = None
         self.dset_annotation = None
-        
+              
     def param(self, pname, defval = None ):
         return self.parms.get( pname, defval )
 
@@ -175,6 +182,7 @@ class mplSlicePlot(FigureCanvas):
             if label: self.showAnnotation( label )
             FigureCanvasAgg.draw(self)
             self.repaint()
+            if isQt4: QtGui.qApp.processEvents()   # Workaround Qt bug in v. 4.x
 
     def setVariable( self, var, dset_title ):
         self.var = var
@@ -183,7 +191,6 @@ class mplSlicePlot(FigureCanvas):
     def setColormap( self, cmap ):
         self.plot.set_cmap( cmap )
         
-
     def plotSlice( self, plot_index, slice_data, coord_value ):
         if plot_index == 0: 
             self.xcoord = self.var.getLatitude()
