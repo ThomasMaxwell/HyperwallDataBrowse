@@ -62,6 +62,9 @@ class mplSlicePlot(FigureCanvas):
         self.zscale = 3
         self.current_plot_index = -1
         self.annotation_box = None
+        self.grid_annotation = None
+        self.time_annotation = None
+        self.dset_annotation = None
         
     def param(self, pname, defval = None ):
         return self.parms.get( pname, defval )
@@ -173,8 +176,9 @@ class mplSlicePlot(FigureCanvas):
             FigureCanvasAgg.draw(self)
             self.repaint()
 
-    def setVariable( self, var ):
+    def setVariable( self, var, dset_title ):
         self.var = var
+        self.dset_annotation = dset_title
         
     def setColormap( self, cmap ):
         self.plot.set_cmap( cmap )
@@ -184,23 +188,27 @@ class mplSlicePlot(FigureCanvas):
         if plot_index == 0: 
             self.xcoord = self.var.getLatitude()
             self.ycoord = self.var.getLevel()
-            annotation = "Longitude = %.1f" % ( coord_value )
+            self.grid_annotation = "Longitude = %.1f" % ( coord_value )
         if plot_index == 1: 
             self.xcoord = self.var.getLongitude()
             self.ycoord = self.var.getLevel()
-            annotation = "Latitude = %.1f" % ( coord_value )
+            self.grid_annotation = "Latitude = %.1f" % ( coord_value )
         if plot_index == 2: 
             self.ycoord = self.var.getLatitude()
             self.xcoord = self.var.getLongitude()
-            annotation = "Level = %.1f" % ( coord_value )
+            self.grid_annotation = "Level = %.1f" % ( coord_value )
         if plot_index == 3: 
             time_axis = self.var.getTime()
             r = cdtime.reltime( coord_value, time_axis.units )
-            annotation = "Time = %s" % str( r.tocomp() )
+            self.time_annotation = "Time = %s" % str( r.tocomp() )
+        if self.time_annotation == None:
+            time_axis = self.var.getTime()
+            r = cdtime.reltime( 0.0, time_axis.units )
+            self.time_annotation = "Time = %s" % str( r.tocomp() )        
         self.data = slice_data
         refresh_axes = ( self.current_plot_index <> plot_index ) and ( plot_index <> 3 )
         self.current_plot_index = plot_index 
-        self.update_figure( refresh_axes, annotation )
+        self.update_figure( refresh_axes, '\n'.join([ self.dset_annotation, self.grid_annotation, self.time_annotation ]) )
 
 class qtApplicationWindow(QtGui.QMainWindow):
     

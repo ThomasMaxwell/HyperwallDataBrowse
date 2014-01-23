@@ -26,6 +26,9 @@ class DataSlicer( QtCore.QObject ):
     def getVariable(self):
         return self.var
     
+    def getDatasetTitle(self):
+        return " %s: %s " % ( self.dset.getglobal('id'), self.dset.getglobal('Title') )
+    
     def getDataCube( self, iTime ):
         dataCube = self.timestep_cache.get( iTime, None )
         if dataCube == None:

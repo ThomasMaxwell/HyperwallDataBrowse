@@ -77,7 +77,7 @@ class CellPlotWidget( QtGui.QWidget ):
                     self.dset_id = dset_data.get( 'id', dset )
                     self.filepath = filename if ( self.dir == None ) else os.path.join( self.dir, filename )
                     self.dataSlicer = DataSlicer( self.filepath, self.varname )
-                    self.cellWidget.setVariable( self.dataSlicer.getVariable() )
+                    self.cellWidget.setVariable( self.dataSlicer.getVariable(), self.dataSlicer.getDatasetTitle() )
                     self.positionSlice( 0, 0.5, 180.0 )
                 else: print>>sys.stderr, "Error, no dataset declared for cell %d " % iproc
 
