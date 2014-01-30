@@ -1,0 +1,13 @@
+dir = ~/Data/AConaty/comp-ECMWF
+
+[ds1]
+   id = geos5
+   file = ac-comp1-geos5.xml
+
+[dv1]
+   name = uwnd
+   ds = ds1
+
+[c1]
+   dv = dv1
+
