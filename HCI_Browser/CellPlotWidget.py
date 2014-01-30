@@ -49,7 +49,8 @@ class CellPlotWidget( QtGui.QWidget ):
             if cmd == 'Moved':
                 values = msg.get( 'values', None )
                 if values: self.positionSlice( slice_index, values[0], values[1] )
-#                    print " Slider Moved: %s " % str( values )
+#                print " Slider Moved: %s " % str( values )
+#                sys.stdout.flush()
 #                sval = float( values[0] ) if values else None
                     
                                 

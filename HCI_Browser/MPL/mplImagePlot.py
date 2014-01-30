@@ -45,6 +45,22 @@ def getAxisLabel( coord_axis ):
     try:    return "%s (%s)" % ( coord_axis.long_name, coord_axis.units )
     except: return coord_axis.id
 
+class FrameEater( QtCore.QObject):
+    
+    def __init__(self, parent, *args, **kwargs):
+        QtCore.QObject.__init__(self)
+        self.nPaintEvents = 0
+
+    def eventFilter(self, obj, event ):
+        if self.nPaintEvents > 0:
+            self.nPaintEvents = self.nPaintEvents - 1
+        print "Process Event: %s, nPaintEvents = %d" % ( event.__class__.__name__,  self.nPaintEvents )
+        sys.stdout.flush()
+        return False
+        
+    def logRepaint(self):
+        self.nPaintEvents = self.nPaintEvents + 1
+
 class mplSlicePlot(FigureCanvas):
 
     def __init__(self, parent, *args, **kwargs):
@@ -72,6 +88,8 @@ class mplSlicePlot(FigureCanvas):
         self.grid_annotation = None
         self.time_annotation = None
         self.dset_annotation = None
+#        self.frameEater = FrameEater( self ) 
+#        self.installEventFilter( self.frameEater )
               
     def param(self, pname, defval = None ):
         return self.parms.get( pname, defval )
