@@ -5,5 +5,5 @@ Enables easy distributed browsing of xyzt climate datasets on hyperwall using ad
 
 Example execution:
 
-mpiexec -np 2 python DistributedApplication.py -c /Developer/Projects/EclipseWorkspace/HyperwallDataBrowse/config/HyperwallDataBrowse.office1.txt
+mpiexec -np 2 -hostfile ~/mpi.hosts python DistributedApplication.py -c ../config/HyperwallDataBrowse.office1.txt
          
