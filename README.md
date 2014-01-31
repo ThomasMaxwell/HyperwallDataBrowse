@@ -8,3 +8,7 @@ Example execution:
 mpiexec -np 2 -hostfile ~/mpi.hosts python DistributedApplication.py -c ../config/HyperwallDataBrowse.office1.txt
          
 mpiexec -np 2 -hostfile ~/.mpi/hosts python DistributedApplication.py -c ../config/HyperwallDataBrowse.viscluster.txt 
+
+mpiexec -np 2 -hostfile ~/mpi.hosts python mpiTest.py 
+
+         
