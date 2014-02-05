@@ -62,6 +62,6 @@ if __name__ == "__main__":
     else:
         window = CellPlotWidgetWindow( hcomm )
         app.connect( app, QtCore.SIGNAL("aboutToQuit()"), window.terminate ) 
-        window.show()
+        window.showFullScreen()
     
     app.exec_()  
