@@ -5,6 +5,7 @@ Created on Jan 13, 2014
 '''
 
 from PyQt4 import QtCore, QtGui
+from ROISelection import ROISelectionWidget
 import sys
 
 class LabeledSliderWidget( QtGui.QWidget ):
@@ -114,14 +115,28 @@ class SliceWidget(QtGui.QWidget):
         super( SliceWidget, self ).__init__( parent ) 
         self.widgets = {}
         self.comm = hcomm
+        self.point = None
         self.createTabLayout()
-        self.leveling_tab_index, tab_layout = self.addTab( 'Data Slice Controls' )
+        self.leveling_tab_index, tab_layout = self.addTab( 'Slice Controls' )
         self.sLonIndex = self.addSlider( "Longitude", tab_layout , min_value=0, max_value=360, init_value=180 )
         self.sLatIndex = self.addSlider( "Latitude", tab_layout , min_value=-90, max_value=90, init_value=0 )
         self.sLevIndex = self.addSlider( "Level", tab_layout , min_value=0, max_value=100, init_value=0 )
         self.sTimeIndex = self.addSlider( "Time", tab_layout , min_value=0, max_value=100, init_value=0 )
+        self.probe_tab_index, probe_tab_layout = self.addTab( 'Probe' )
+        self.addProbeWidget( probe_tab_layout )
 #        print "Starting SliceWidget, rank = %d, nproc = %d" % ( self.comm.rank, self.comm.size )
 
+    def addProbeWidget( self, layout ):
+        self.roiSelector = ROISelectionWidget(self)
+        layout.addWidget( self.roiSelector )
+        self.connect( self.roiSelector, QtCore.SIGNAL('pointSelected()'), self.setPoint )
+
+    def setPoint(self):
+        self.point = self.roiSelector.getPoint()
+#        print "Point: ", str( self.point )    
+        if self.comm:
+            self.comm.post( { 'type': 'Probe', 'point' : self.point } )
+            
     def addSlider(self, label, layout, **args ):
         slider_index = len( self.widgets ) 
         slider = LabeledSliderWidget( slider_index, label, **args )
@@ -197,7 +212,7 @@ class SliceWidgetWindow(QtGui.QMainWindow):
         self.wizard = SliceWidget( self, comm )
         self.setCentralWidget(self.wizard)
         self.setWindowTitle("Hyperwall Data Browser")
-        self.resize(700,400)
+        self.resize(1200,800)
 
     def terminate(self):
         self.wizard.terminate()

@@ -43,6 +43,8 @@ class CellPlotWidget( QtGui.QWidget ):
         elif msg['type'] == 'Config': 
             self.buildCanvas()
             self.processConfigData( msg['data'] )   
+        elif msg['type'] == 'Probe': 
+            self.processProbe( msg.get( 'point', None ) )
         elif msg['type'] == 'Slider': 
             cmd = msg.get( 'cmd', None )
             slice_index = int( msg.get( 'index', -1 ) )
@@ -53,7 +55,9 @@ class CellPlotWidget( QtGui.QWidget ):
 #                sys.stdout.flush()
 #                sval = float( values[0] ) if values else None
                     
-                                
+    def processProbe( self, point ):
+        self.cellWidget.plotPoint( point )    
+                               
     def processConfigData( self, config_data ): 
         print " processConfigData "  
         global_config = config_data.get('global', None )

@@ -88,6 +88,7 @@ class mplSlicePlot(FigureCanvas):
         self.grid_annotation = None
         self.time_annotation = None
         self.dset_annotation = None
+        self.slice_loc = [ 0, 0, 0, 0 ]
 #        self.frameEater = FrameEater( self ) 
 #        self.installEventFilter( self.frameEater )
               
@@ -209,7 +210,19 @@ class mplSlicePlot(FigureCanvas):
     def setColormap( self, cmap ):
         self.plot.set_cmap( cmap )
         
+    def plotPoint(self, point ):
+        point_annotation = "Probe Point = ( %.1f, %.1f )" % ( point[0], point[1] )
+        label = '\n'.join([ self.dset_annotation, self.grid_annotation, self.time_annotation, point_annotation ]) 
+        self.showAnnotation( label )
+        FigureCanvasAgg.draw(self)
+        self.repaint()
+        if isQt4: QtGui.qApp.processEvents()   # Workaround Qt bug in v. 4.x
+        print "PlotPoint: %s, slice: %s " % ( point_annotation, str( self.slice_loc ) )
+        val = self.var( latitude=point[0], longitude=point[1], level=self.slice_loc[2], time=self.slice_loc[3] )
+        print "Shape: ", str(val.shape)
+        
     def plotSlice( self, plot_index, slice_data, coord_value ):
+        self.slice_loc[plot_index] = coord_value
         if plot_index == 0: 
             self.xcoord = self.var.getLatitude()
             self.ycoord = self.var.getLevel()
@@ -225,11 +238,15 @@ class mplSlicePlot(FigureCanvas):
         if plot_index == 3: 
             time_axis = self.var.getTime()
             r = cdtime.reltime( coord_value, time_axis.units )
-            self.time_annotation = "Time = %s" % str( r.tocomp() )
+            ts = str( r.tocomp() )
+            self.time_annotation = "Time = %s" % ts
+            self.slice_loc[plot_index] = ts
         if self.time_annotation == None:
             time_axis = self.var.getTime()
             r = cdtime.reltime( 0.0, time_axis.units )
-            self.time_annotation = "Time = %s" % str( r.tocomp() )        
+            ts = str( r.tocomp() )
+            self.time_annotation = "Time = %s" % ts 
+            self.slice_loc[ plot_index ] = ts      
         self.data = slice_data
         refresh_axes = ( self.current_plot_index <> plot_index ) and ( plot_index <> 3 )
         self.current_plot_index = plot_index 
