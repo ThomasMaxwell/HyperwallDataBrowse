@@ -20,6 +20,11 @@ progname = "Hyperwall Cell Plot"
 qtversion = str( QtCore.qVersion() )
 isQt4 = ( qtversion[0] == '4' )
 
+def prettyPrintFloat( fval ):
+    str_format = "%.2f"
+    if ( abs(fval) > 9999.9 ) or ( abs(fval) < 0.1 ): str_format = "%.2e"
+    return str_format % fval
+
 cmaps = [('Sequential',     ['binary', 'Blues', 'BuGn', 'BuPu', 'gist_yarg',
                              'GnBu', 'Greens', 'Greys', 'Oranges', 'OrRd',
                              'PuBu', 'PuBuGn', 'PuRd', 'Purples', 'RdPu',
@@ -89,6 +94,7 @@ class mplSlicePlot(FigureCanvas):
         self.time_annotation = None
         self.dset_annotation = None
         self.slice_loc = [ 0, 0, 0, 0 ]
+        self.cursor_pos = [ 0.0, 0.0 ]
 #        self.frameEater = FrameEater( self ) 
 #        self.installEventFilter( self.frameEater )
               
@@ -185,6 +191,8 @@ class mplSlicePlot(FigureCanvas):
                 
     def update_figure( self, refresh = True, label=None, **kwargs ):    
         if ( id(self.data) <> id(None) ):
+            cp = [ self.cursor_pos, ]
+            x,y = zip(*cp)
             if refresh:
                 self.plot = self.axes.imshow( self.data, cmap=self.param('cmap'), norm=self.param('norm'), aspect=self.param('aspect'), interpolation=self.param('interpolation'), alpha=self.param('self.alpha'), vmin=self.vrange[0],
                             vmax=self.vrange[1], origin=self.param('origin'), extent=self.param('extent'), shape=self.param('shape'), filternorm=self.param('filternorm'), filterrad=self.param('filterrad',4.0),
@@ -196,8 +204,12 @@ class mplSlicePlot(FigureCanvas):
                 self.createColorbar()
                 self.setAxisLabels()
                 self.annotation_box = None
+                self.axes.hold(True)
+                self.cursor = self.axes.plot( x, y, 'o', color='blue' )[0]
+                self.axes.hold(False)
             else:
                 self.plot.set_array(self.data)
+                self.cursor.set_data( x, y )
             if label: self.showAnnotation( label )
             FigureCanvasAgg.draw(self)
             self.repaint()
@@ -210,16 +222,14 @@ class mplSlicePlot(FigureCanvas):
     def setColormap( self, cmap ):
         self.plot.set_cmap( cmap )
         
-    def plotPoint(self, point ):
-        point_annotation = "Probe Point = ( %.1f, %.1f )" % ( point[0], point[1] )
+    def plotPoint(self, point, ptVal ):
+        point_annotation = "Probe Point( %.1f, %.1f ) = %s" % ( point[0], point[1], prettyPrintFloat(ptVal) )
         label = '\n'.join([ self.dset_annotation, self.grid_annotation, self.time_annotation, point_annotation ]) 
         self.showAnnotation( label )
+        self.cursor_pos = point
         FigureCanvasAgg.draw(self)
         self.repaint()
         if isQt4: QtGui.qApp.processEvents()   # Workaround Qt bug in v. 4.x
-        print "PlotPoint: %s, slice: %s " % ( point_annotation, str( self.slice_loc ) )
-        val = self.var( latitude=point[0], longitude=point[1], level=self.slice_loc[2], time=self.slice_loc[3] )
-        print "Shape: ", str(val.shape)
         
     def plotSlice( self, plot_index, slice_data, coord_value ):
         self.slice_loc[plot_index] = coord_value
@@ -276,11 +286,11 @@ class qtApplicationWindow(QtGui.QMainWindow):
         self.plot = mplSlicePlot( self.main_widget )
         l.addWidget( self.plot )
         
-    def generateSlice( self, plot_index, slider_value ):
-        self.plot.generateSlice( plot_index, slider_value )
+    def generateSlice( self, plot_index, slice_data, coord_value ):
+        self.plot.plotSlice( plot_index, slice_data, coord_value )
 
-    def setVariable( self, var ):
-        self.plot.setVariable( var )
+    def setVariable( self, var, title ):
+        self.plot.setVariable( var, title )
 
 if __name__ == '__main__':
     data_dir = "~/Data/AConaty/comp-ECMWF"
@@ -294,8 +304,8 @@ if __name__ == '__main__':
     
     aw = qtApplicationWindow()
     aw.setWindowTitle("%s" % progname)
-    aw.setVariable( var )
-    aw.generateSlice( 0, 0.5 )
+    aw.setVariable( var, "Test" )
+    aw.generateSlice( 0, var[0,0,:,:], 0.0 )
     
     if   displayMode == WindowDisplayMode.Normal:       aw.show()
     elif displayMode == WindowDisplayMode.FullScreen:   aw.showFullScreen()
