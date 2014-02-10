@@ -56,8 +56,9 @@ class CellPlotWidget( QtGui.QWidget ):
 #                sval = float( values[0] ) if values else None
                     
     def processProbe( self, point ):
-        ptVal = self.dataSlicer.getPoint( lon=point[0], lat=point[1] )
-        self.cellWidget.plotPoint( point, ptVal )    
+        pointCoords, ptVal = self.dataSlicer.getPoint( rlon=point[0], rlat=point[1] )
+        self.cellWidget.plotPoint( pointCoords, ptVal ) 
+        print " processProbe: %s %s  "  % ( str(pointCoords), str(ptVal) )   
                                
     def processConfigData( self, config_data ): 
         print " processConfigData "  

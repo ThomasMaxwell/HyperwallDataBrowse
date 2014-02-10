@@ -60,6 +60,7 @@ class DataSlicer( QtCore.QObject ):
         taxis = self.var.getTime()
         saxes = [ None, None, None ]
         pointIndices = copy.deepcopy( self.currentPosition )
+        pointCoords = [ 0, 0, 0 ]
         for ( iAxis, axisName ) in enumerate( [ 'lon', 'lat', 'lev'] ):
             cVal = args.get( axisName, None )
             if cVal:
@@ -71,8 +72,20 @@ class DataSlicer( QtCore.QObject ):
                     iVal = np.searchsorted( avals[::-1], cVal )
                     iVal = nvals - iVal - 1
                 else:
-                    iVal = np.searchsorted( avals, cVal ) 
-                pointIndices[ iAxis ] = iVal if (iVal < nvals) else ( nvals - 1 )
+                    iVal = np.searchsorted( avals, cVal )
+                iVal = iVal if (iVal < nvals) else ( nvals - 1 )
+                pointCoords[ iAxis ] = avals[ iVal ] 
+                pointIndices[ iAxis ] = iVal
+            rVal = args.get( "r%s" % axisName, None )
+            if rVal:
+                axis = self.getAxis( iAxis )
+                saxes[ iAxis ] = axis
+                avals = axis.getValue()
+                nvals = len( avals )
+                iVal = int( rVal*nvals )
+                iVal = iVal if (iVal < nvals) else ( nvals - 1 )
+                pointCoords[ iAxis ] = avals[ iVal ]
+                pointIndices[ iAxis ] = iVal
         dataCube = None if ( self.dsCacheLevel == CacheLevel.NoCache ) else self.getDataCube( pointIndices[ 3 ] )
         hasDataCube = ( id(dataCube) <> id(None) )
         try:
@@ -82,7 +95,7 @@ class DataSlicer( QtCore.QObject ):
             print>>sys.stderr, "Error getting point[%s] (%s): %s " % ( str(args), str(pointIndices), str(err) )
             return None
         
-        return datapoint.squeeze()              
+        return pointCoords, datapoint.squeeze()              
     
     def getSlice( self, iAxis, slider_pos, coord_value ):
         taxis = self.var.getTime()

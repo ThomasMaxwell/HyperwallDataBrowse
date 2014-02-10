@@ -6,6 +6,7 @@ Created on Jan 13, 2014
 
 from PyQt4 import QtCore, QtGui
 from ROISelection import ROISelectionWidget
+from PointSelection import PointSelectionWidget
 import sys
 
 class LabeledSliderWidget( QtGui.QWidget ):
@@ -124,16 +125,23 @@ class SliceWidget(QtGui.QWidget):
         self.sTimeIndex = self.addSlider( "Time", tab_layout , min_value=0, max_value=100, init_value=0 )
         self.probe_tab_index, probe_tab_layout = self.addTab( 'Probe' )
         self.addProbeWidget( probe_tab_layout )
+        self.probe_tab_index, probe_tab_layout = self.addTab( 'ROI' )
+        self.addROIWidget( probe_tab_layout )
 #        print "Starting SliceWidget, rank = %d, nproc = %d" % ( self.comm.rank, self.comm.size )
 
     def addProbeWidget( self, layout ):
+        self.pointSelector = PointSelectionWidget([5,3])
+        layout.addWidget( self.pointSelector )
+        self.pointSelector.setSelectionCallback( self.setPoint )
+
+    def addROIWidget( self, layout ):
         self.roiSelector = ROISelectionWidget(self)
         layout.addWidget( self.roiSelector )
-        self.connect( self.roiSelector, QtCore.SIGNAL('pointSelected()'), self.setPoint )
+        self.connect( self.roiSelector, QtCore.SIGNAL('roiSelected()'), self.setPoint )
 
-    def setPoint(self):
-        self.point = self.roiSelector.getPoint()
-#        print "Point: ", str( self.point )    
+    def setPoint(self, rel_point):
+        self.point = rel_point
+        print "Relative Selection Point: ", str( self.point )    
         if self.comm:
             self.comm.post( { 'type': 'Probe', 'point' : self.point } )
             

@@ -4,7 +4,8 @@ Created on Jan 21, 2014
 @author: tpmaxwell
 '''
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
+from matplotlib.widgets import Cursor
 from PyQt4 import QtCore, QtGui
 import sys, os, cdms2, random, time, cdtime, ctypes, traceback
 from matplotlib.backends.backend_qt4agg import FigureCanvasAgg, FigureCanvasQTAgg as FigureCanvas
@@ -19,6 +20,16 @@ progname = "Hyperwall Cell Plot"
 
 qtversion = str( QtCore.qVersion() )
 isQt4 = ( qtversion[0] == '4' )
+
+class MyCursor( Cursor ):
+    
+    def __init__( self, axes, **args ):
+        Cursor.__init__( self, axes, **args )
+        
+    def onmove(self, event):
+        Cursor.onmove( self, event )
+        print "Cursor move : %s %s " % ( str(event.xdata), str(event.ydata) )
+    
 
 def prettyPrintFloat( fval ):
     str_format = "%.2f"
@@ -40,6 +51,13 @@ cmaps = [('Sequential',     ['binary', 'Blues', 'BuGn', 'BuPu', 'gist_yarg',
                              'gist_stern', 'jet', 'brg', 'CMRmap', 'cubehelix',
                              'gnuplot', 'gnuplot2', 'ocean', 'rainbow',
                              'terrain', 'flag', 'prism'])]
+
+class MoveEvent:
+    
+    def __init__(self, inaxes, xdata, ydata ):
+        self.inaxes = inaxes
+        self.xdata = xdata
+        self.ydata = ydata
 
 class WindowDisplayMode:
     Normal = 0
@@ -95,6 +113,7 @@ class mplSlicePlot(FigureCanvas):
         self.dset_annotation = None
         self.slice_loc = [ 0, 0, 0, 0 ]
         self.cursor_pos = [ 0.0, 0.0 ]
+        self.cursor_plot = None
 #        self.frameEater = FrameEater( self ) 
 #        self.installEventFilter( self.frameEater )
               
@@ -188,11 +207,21 @@ class mplSlicePlot(FigureCanvas):
             self.annotation_box = self.axes.text( 0.05, 0.95, textstr, transform=self.fig.transFigure, fontsize=14, verticalalignment='top', bbox=props)
         else:
             self.annotation_box.set_text( textstr )
+            
+    def updateCursor( self, point ):          
+        if self.cursor_plot == None: 
+#                self.axes.hold(True)
+            self.cursor_plot = MyCursor( self.axes,  color='red', linewidth=2 ) # useblit=True,
+#                self.axes.hold(False)
+#            cdata = self.axes.transData.transform_point( self.cursor_pos )
+        x = [ point[0] ]
+        y = [ point[1] ]
+        mv_event = MoveEvent( self.axes, x, y )
+        self.cursor_plot.onmove( mv_event )
+        print "Update cursor: %s, %s " % ( x, y  ); sys.stdout.flush()
                 
     def update_figure( self, refresh = True, label=None, **kwargs ):    
         if ( id(self.data) <> id(None) ):
-            cp = [ self.cursor_pos, ]
-            x,y = zip(*cp)
             if refresh:
                 self.plot = self.axes.imshow( self.data, cmap=self.param('cmap'), norm=self.param('norm'), aspect=self.param('aspect'), interpolation=self.param('interpolation'), alpha=self.param('self.alpha'), vmin=self.vrange[0],
                             vmax=self.vrange[1], origin=self.param('origin'), extent=self.param('extent'), shape=self.param('shape'), filternorm=self.param('filternorm'), filterrad=self.param('filterrad',4.0),
@@ -204,13 +233,11 @@ class mplSlicePlot(FigureCanvas):
                 self.createColorbar()
                 self.setAxisLabels()
                 self.annotation_box = None
-                self.axes.hold(True)
-                self.cursor = self.axes.plot( x, y, 'o', color='blue' )[0]
-                self.axes.hold(False)
             else:
                 self.plot.set_array(self.data)
-                self.cursor.set_data( x, y )
-            if label: self.showAnnotation( label )
+#            self.updateCursor()
+            if label: 
+                self.showAnnotation( label )
             FigureCanvasAgg.draw(self)
             self.repaint()
             if isQt4: QtGui.qApp.processEvents()   # Workaround Qt bug in v. 4.x
@@ -226,10 +253,11 @@ class mplSlicePlot(FigureCanvas):
         point_annotation = "Probe Point( %.1f, %.1f ) = %s" % ( point[0], point[1], prettyPrintFloat(ptVal) )
         label = '\n'.join([ self.dset_annotation, self.grid_annotation, self.time_annotation, point_annotation ]) 
         self.showAnnotation( label )
-        self.cursor_pos = point
-        FigureCanvasAgg.draw(self)
-        self.repaint()
-        if isQt4: QtGui.qApp.processEvents()   # Workaround Qt bug in v. 4.x
+        self.updateCursor( point )
+        self.axes.figure.canvas.draw_idle()
+#        FigureCanvasAgg.draw(self)
+#        self.repaint()
+#        if isQt4: QtGui.qApp.processEvents()   # Workaround Qt bug in v. 4.x
         
     def plotSlice( self, plot_index, slice_data, coord_value ):
         self.slice_loc[plot_index] = coord_value
