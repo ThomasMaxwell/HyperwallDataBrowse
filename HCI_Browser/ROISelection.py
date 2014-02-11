@@ -326,7 +326,7 @@ class ROISelectionWidget(QWidget):
     def UpdateROIRect(self, scenePt0, scenePt1 ):
         currentFrame = self.getCurrentMapFrame()
         currentFrame.setRect ( scenePt0.x(), scenePt0.y(), scenePt1.x()-scenePt0.x(), scenePt1.y()-scenePt0.y() )
-        self.emit(SIGNAL('roiSelected()'))
+        self.emit( SIGNAL('roiSelected'), self.getROI() )
 
     def UpdateScenePoint(self, scenePt ):
         pass

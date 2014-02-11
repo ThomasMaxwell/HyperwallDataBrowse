@@ -24,6 +24,7 @@ class DataSlicer( QtCore.QObject ):
         self.currentGridAxis = -1
         self.currentSlice = -1
         self.currentTime = 0
+        self.roi = None
         self.currentPosition = [ 0, 0, 0, 0 ]
         
     def getVariable(self):
@@ -36,7 +37,8 @@ class DataSlicer( QtCore.QObject ):
         dataCube = self.timestep_cache.get( iTime, None )
         if dataCube == None:
             time_axis = self.var.getTime()
-            dataCube = self.var( time=time_axis[iTime], order ='zyx' )
+            if self.roi == None:    dataCube = self.var( time=time_axis[iTime], order ='zyx' )
+            else:                   dataCube = self.var( time=time_axis[iTime], latitude=(self.roi[1],self.roi[3]), longitude=(self.roi[0],self.roi[2]), order ='zyx' )
             dataCube = dataCube.data.squeeze() 
             if ( self.dsCacheLevel == CacheLevel.AllTimesteps ):
                 self.timestep_cache[ iTime ] = dataCube 
@@ -61,13 +63,36 @@ class DataSlicer( QtCore.QObject ):
         saxes = [ None, None, None ]
         pointIndices = copy.deepcopy( self.currentPosition )
         pointCoords = [ 0, 0, 0 ]
+        rpt = args.get( 'rpt', None )
+        if rpt:
+            if self.currentGridAxis==0:
+                args[ 'rlat' ] = rpt[0]
+                args[ 'rlev' ] = rpt[1]
+                activeCoords = [ 1, 2 ]
+            elif self.currentGridAxis==1:
+                args[ 'rlon' ] = rpt[0]
+                args[ 'rlev' ] = rpt[1]
+                activeCoords = [ 0, 2 ]
+            elif self.currentGridAxis==2:
+                args[ 'rlon' ] = rpt[0]
+                args[ 'rlat' ] = rpt[1]
+                activeCoords = [ 0, 1 ]
         for ( iAxis, axisName ) in enumerate( [ 'lon', 'lat', 'lev'] ):
+            axis = self.getAxis( iAxis )
+            avals = axis.getValue()
+            saxes[ iAxis ] = axis
+            nvals = len( avals )
             cVal = args.get( axisName, None )
+            if cVal == None:
+                rVal = args.get( "r%s" % axisName, None )
+                if rVal:
+                    if (self.roi == None) or (iAxis==2):
+                        vbnds = [ avals[0], avals[-1] ]
+                    else:
+                        vbnds = [ self.roi[iAxis], self.roi[2+iAxis] ]
+                
+                    cVal = vbnds[0] + rVal * ( vbnds[1] - vbnds[0] )
             if cVal:
-                axis = self.getAxis( iAxis )
-                saxes[ iAxis ] = axis
-                avals = axis.getValue()
-                nvals = len( avals )
                 if avals[0] > avals[-1]:
                     iVal = np.searchsorted( avals[::-1], cVal )
                     iVal = nvals - iVal - 1
@@ -76,16 +101,7 @@ class DataSlicer( QtCore.QObject ):
                 iVal = iVal if (iVal < nvals) else ( nvals - 1 )
                 pointCoords[ iAxis ] = avals[ iVal ] 
                 pointIndices[ iAxis ] = iVal
-            rVal = args.get( "r%s" % axisName, None )
-            if rVal:
-                axis = self.getAxis( iAxis )
-                saxes[ iAxis ] = axis
-                avals = axis.getValue()
-                nvals = len( avals )
-                iVal = int( rVal*nvals )
-                iVal = iVal if (iVal < nvals) else ( nvals - 1 )
-                pointCoords[ iAxis ] = avals[ iVal ]
-                pointIndices[ iAxis ] = iVal
+            
         dataCube = None if ( self.dsCacheLevel == CacheLevel.NoCache ) else self.getDataCube( pointIndices[ 3 ] )
         hasDataCube = ( id(dataCube) <> id(None) )
         try:
@@ -95,7 +111,7 @@ class DataSlicer( QtCore.QObject ):
             print>>sys.stderr, "Error getting point[%s] (%s): %s " % ( str(args), str(pointIndices), str(err) )
             return None
         
-        return pointCoords, datapoint.squeeze()              
+        return [ pointCoords[activeCoords[0]], pointCoords[activeCoords[1]] ], [ pointIndices[activeCoords[0]], pointIndices[activeCoords[1]] ], datapoint.squeeze()              
     
     def getSlice( self, iAxis, slider_pos, coord_value ):
         taxis = self.var.getTime()
@@ -121,14 +137,17 @@ class DataSlicer( QtCore.QObject ):
         hasDataCube = ( id(dataCube) <> id(None) )
         try:
             if    (iAxis == 0) or ( (iAxis == 3) and (self.currentGridAxis == 0) ):   
-                if hasDataCube:     dataslice = dataCube[ :, :, iVal ]
-                else:               dataslice = self.var( time=taxis[iTime], longitude=axis[iVal], order ='zy' )                  
+                if hasDataCube:             dataslice = dataCube[ :, :, iVal ]
+                elif ( self.roi == None):   dataslice = self.var( time=taxis[iTime], longitude=axis[iVal], order ='zy' )  
+                else:                       dataslice = self.var( time=taxis[iTime], longitude=axis[iVal], latitude=(self.roi[1],self.roi[3]), order ='zy' )   
             elif  (iAxis == 1) or ( (iAxis == 3) and (self.currentGridAxis == 1) ):   
-                if hasDataCube:     dataslice = dataCube[ :, iVal, : ]
-                else:               dataslice = self.var( time=taxis[iTime], latitude=axis[iVal], order ='zx'  )                 
+                if hasDataCube:             dataslice = dataCube[ :, iVal, : ]
+                elif ( self.roi == None):   dataslice = self.var( time=taxis[iTime], latitude=axis[iVal], order ='zx'  )                 
+                else:                       dataslice = self.var( time=taxis[iTime], latitude=axis[iVal], longitude=(self.roi[0],self.roi[2]), order ='zx'  )                 
             elif  (iAxis == 2) or ( (iAxis == 3) and (self.currentGridAxis == 2) ):   
-                if hasDataCube:     dataslice = dataCube[ iVal, :, : ]
-                else:               dataslice = self.var( time=taxis[iTime], level=axis[iVal], order ='yx'  ) 
+                if hasDataCube:             dataslice = dataCube[ iVal, :, : ]
+                elif ( self.roi == None):   dataslice = self.var( time=taxis[iTime], level=axis[iVal], order ='yx'  ) 
+                else:                       dataslice = self.var( time=taxis[iTime], level=axis[iVal], latitude=(self.roi[1],self.roi[3]), longitude=(self.roi[0],self.roi[2]), order ='yx'  ) 
         except cdms2.error.CDMSError, err:
             print>>sys.stderr, "Error getting slice[%d] (%s): %s " % ( iAxis, str(coord_value), str(err) )
             return None
@@ -139,6 +158,34 @@ class DataSlicer( QtCore.QObject ):
         self.currentTime = iTime
         imageOutput =  dataslice.squeeze() 
              
+        return imageOutput
+
+    def setRoi( self, roi ):
+        self.roi = roi
+        self.timestep_cache = {}
+        taxis = self.var.getTime()
+        iAxis = self.currentGridAxis
+        iVal = self.currentSlice if (iAxis == 2) else 0
+        iTime = self.currentTime
+        axis = self.getAxis( iAxis ) 
+        dataCube = None if ( self.dsCacheLevel == CacheLevel.NoCache ) else self.getDataCube( iTime )
+        hasDataCube = ( id(dataCube) <> id(None) )
+        try:
+            if    (iAxis == 0) or ( (iAxis == 3) and (self.currentGridAxis == 0) ):   
+                if hasDataCube:     dataslice = dataCube[ :, :, iVal ]
+                else:               dataslice = self.var( time=taxis[iTime], longitude=axis[iVal], latitude=(self.roi[1],self.roi[3]), order ='zy' )                  
+            elif  (iAxis == 1) or ( (iAxis == 3) and (self.currentGridAxis == 1) ):   
+                if hasDataCube:     dataslice = dataCube[ :, iVal, : ]
+                else:               dataslice = self.var( time=taxis[iTime], latitude=axis[iVal], longitude=(self.roi[0],self.roi[2]), order ='zx'  )                 
+            elif  (iAxis == 2) or ( (iAxis == 3) and (self.currentGridAxis == 2) ):   
+                if hasDataCube:     dataslice = dataCube[ iVal, :, : ]
+                else:               dataslice = self.var( time=taxis[iTime], level=axis[iVal], latitude=(self.roi[1],self.roi[3]), longitude=(self.roi[0],self.roi[2]), order ='yx'  ) 
+        except cdms2.error.CDMSError, err:
+            print>>sys.stderr, "Error getting slice[%d]: %s " % ( iAxis, str(err) )
+            return None
+        
+        self.currentSlice = iVal
+        imageOutput =  dataslice.squeeze()              
         return imageOutput
     
 if __name__ == "__main__":

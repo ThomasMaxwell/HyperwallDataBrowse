@@ -4,8 +4,11 @@ Created on Jan 15, 2014
 @author: tpmaxwel
 '''
 
+from PyQt4 import QtCore
 import numpy as np
 import vtk, StringIO, cPickle, sys, os
+
+control_message_signal = QtCore.SIGNAL("ControlMsg")
 
 def isList( val ):
     valtype = type(val)

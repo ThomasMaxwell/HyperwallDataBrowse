@@ -130,20 +130,26 @@ class SliceWidget(QtGui.QWidget):
 #        print "Starting SliceWidget, rank = %d, nproc = %d" % ( self.comm.rank, self.comm.size )
 
     def addProbeWidget( self, layout ):
-        self.pointSelector = PointSelectionWidget([5,3])
+        self.pointSelector = PointSelectionWidget([ 3, 5 ])
         layout.addWidget( self.pointSelector )
         self.pointSelector.setSelectionCallback( self.setPoint )
 
     def addROIWidget( self, layout ):
         self.roiSelector = ROISelectionWidget(self)
         layout.addWidget( self.roiSelector )
-        self.connect( self.roiSelector, QtCore.SIGNAL('roiSelected()'), self.setPoint )
+        self.connect( self.roiSelector, QtCore.SIGNAL('roiSelected'), self.setSelectedROI )
 
     def setPoint(self, rel_point):
         self.point = rel_point
         print "Relative Selection Point: ", str( self.point )    
         if self.comm:
             self.comm.post( { 'type': 'Probe', 'point' : self.point } )
+
+    def setSelectedROI(self, roi ):
+        self.roi = roi
+        print "Set ROI: ", str( self.roi )    
+        if self.comm:
+            self.comm.post( { 'type': 'Subset', 'roi' : self.roi } )
             
     def addSlider(self, label, layout, **args ):
         slider_index = len( self.widgets ) 

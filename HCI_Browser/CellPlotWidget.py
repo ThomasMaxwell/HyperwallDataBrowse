@@ -3,12 +3,13 @@ Created on Jan 13, 2014
 
 @author: tpmaxwel
 '''
-from PyQt4 import QtGui
+from PyQt4 import QtGui, QtCore
 import sys, os, cdms2
-from ClusterCommunicator import control_message_signal
+from Utilities import control_message_signal
 from ColormapManager import ColorMapManager
 from ImageDataSlicer import DataSlicer
 from HCI_Browser.MPL import getCellWidget
+
 
 class PlotLib:
     VTK = 0
@@ -36,7 +37,7 @@ class CellPlotWidget( QtGui.QWidget ):
             self.comm.start()
             
     def processConfigCmd( self, msg ):
-#        print " CellPlotWidget: Process Config Cmd: ", str( msg )
+        print " CellPlotWidget: Process Config Cmd: ", str( msg )
         if msg['type'] == 'Quit': 
             self.terminate()
             self.parent().close()
@@ -45,6 +46,8 @@ class CellPlotWidget( QtGui.QWidget ):
             self.processConfigData( msg['data'] )   
         elif msg['type'] == 'Probe': 
             self.processProbe( msg.get( 'point', None ) )
+        elif msg['type'] == 'Subset': 
+            self.processSubset( msg.get( 'roi', None ) )
         elif msg['type'] == 'Slider': 
             cmd = msg.get( 'cmd', None )
             slice_index = int( msg.get( 'index', -1 ) )
@@ -56,17 +59,23 @@ class CellPlotWidget( QtGui.QWidget ):
 #                sval = float( values[0] ) if values else None
                     
     def processProbe( self, point ):
-        pointCoords, ptVal = self.dataSlicer.getPoint( rlon=point[0], rlat=point[1] )
-        self.cellWidget.plotPoint( pointCoords, ptVal ) 
-        print " processProbe: %s %s  "  % ( str(pointCoords), str(ptVal) )   
+        pointCoords, pointIndices, ptVal = self.dataSlicer.getPoint( rpt=point )
+        self.cellWidget.plotPoint( pointCoords, pointIndices, ptVal ) 
+        print " processProbe: %s %s %s "  % ( str(pointCoords), str(pointIndices), str(ptVal) )   
+
+    def processSubset( self, roi ):
+        dataSlice = self.dataSlicer.setRoi( roi )          
+        if id(dataSlice) <> id(None):
+            self.slicedImageData =  dataSlice     
+            self.cellWidget.plotSubset( self.slicedImageData, roi )   
+        print " processSubset: %s "  % ( str(roi) )   
                                
     def processConfigData( self, config_data ): 
-        print " processConfigData "  
         global_config = config_data.get('global', None )
         if global_config:
             self.roi = global_config.get('roi',None)
             self.dir = global_config.get('dir',None)
-        iproc = self.comm.rank
+        iproc = self.comm.rank if self.comm else 1
         dset = None
         cell_data = config_data.get( "c%d" % iproc, None )
         if cell_data:
@@ -106,7 +115,7 @@ class CellPlotWidget( QtGui.QWidget ):
         top_level_layout.addWidget( self.cellWidget )
         
     def terminate(self):
-        self.comm.stop()
+        if self.comm: self.comm.stop()
        
 class CellPlotWidgetWindow( QtGui.QMainWindow ):
 
@@ -122,12 +131,30 @@ class CellPlotWidgetWindow( QtGui.QMainWindow ):
         self.close()
                 
 if __name__ == "__main__":
-    app = QtGui.QApplication( ['Hyperwall Cell'] )
-    displayMode = WindowDisplayMode.Normal
-    window = CellPlotWidgetWindow()
-    if len(sys.argv)>2 and sys.argv[1] == '-c':
-        window.wizard.loadFromCommand(sys.argv[2:])
-    if   displayMode == WindowDisplayMode.Normal:       window.show()
-    elif displayMode == WindowDisplayMode.FullScreen:   window.showFullScreen()
-    elif displayMode == WindowDisplayMode.Maximized:    window.showMaximized()
+    
+    data_dir = '/Developer/Data/AConaty/comp-ECMWF'
+    data_file = 'ac-comp1-geos5.xml'
+    data_var = 'uwnd'
+    dsid = 'geos5'
+    roi = [-127.6, 6.8, -71.0, 57.2]
+    
+    app = QtGui.QApplication( ['Hyperwall Data Browser'] )
+
+    window = CellPlotWidgetWindow( None )
+    app.connect( app, QtCore.SIGNAL("aboutToQuit()"), window.terminate ) 
+    window.show()
+    
+    cfg_data = {'type': 'Config', 'data': {'c1': {'dv': 'dv1'}, 'global': {'dir': data_dir}, 'dv1': {'name': data_var, 'ds': 'ds1'}, 'ds1': {'id': dsid, 'file': data_file}}}
+    window.wizard.processConfigCmd( cfg_data )
+
+#     cfg_data = {'index': 2, 'cmd': 'Moved', 'values': (0.017, 1.7000000000000002), 'type': 'Slider'}
+#     window.wizard.processConfigCmd( cfg_data )
+    
+    cfg_data = {'type': 'Probe', 'point': [0.5, 0.1 ] }
+    window.wizard.processConfigCmd( cfg_data )
+    
+#     
+#     cfg_data = {'roi': roi, 'type': 'Subset'}
+#     window.wizard.processConfigCmd( cfg_data )
+    
     app.exec_()  

@@ -4,11 +4,10 @@ Created on Jan 13, 2014
 @author: tpmaxwel
 '''
 
-from PyQt4 import QtCore, QtGui
 from mpi4py import MPI
+from PyQt4 import QtCore, QtGui
 import time
-
-control_message_signal = QtCore.SIGNAL("ControlMsg")
+from Utilities import control_message_signal
 
 class HControllerComm( QtCore.QObject ):
 
