@@ -153,6 +153,57 @@ class mplSlicePlot(FigureCanvas):
     def compute_initial_figure(self):
         pass   
 
+#     def setTicks1( self, iaxis, nticks, coord_bounds=None ):            
+#         tvals = [0]*nticks
+#         tlocs = [0]*nticks     
+#         axis = self.xcoord if ( iaxis == 0 ) else self.ycoord
+#         axis_vals = axis.getValue() 
+#         nvals = len( axis_vals )
+#         bounds = self.axes.get_xbound() if ( iaxis == 0 ) else self.axes.get_ybound()
+#         brange = bounds[1] - bounds[0]
+#         tstep = brange / float( nticks ) 
+#         ihalfstep = brange / ( 2 * float( nvals ) )
+#         invertAxis = ( iaxis == 1 )
+#         if axis.isLevel() and hasattr( axis, 'positive' ) :           
+#             invertValues = (bounds[0] < bounds[1]) if axis.positive == 'down' else (bounds[1] < bounds[0])
+#             if invertValues: invertAxis = not invertAxis
+#                    
+#         if invertAxis:
+#             for iTick in range( 0, nticks ):
+#                 tlocs[iTick] = bounds[1] - ( tstep * iTick )   
+#         else:
+#             for iTick in range( 0, nticks ):
+#                 tlocs[iTick] = bounds[0] + tstep * iTick  
+#             
+#         if coord_bounds == None: 
+#             index_offset = 0
+#             index_step = nvals / float( nticks - 1 )
+#             self.axes_intervals[iaxis] = [ 0, nvals ]
+#         else: 
+#             if axis.isLongitude() and ( ( coord_bounds[0] < 0.0 ) or ( coord_bounds[1] < 0.0 ) ):
+#                 coord_bounds[0] = coord_bounds[0] + 360.0
+#                 coord_bounds[1] = coord_bounds[1] + 360.0
+#             index_interval = axis.mapIntervalExt( coord_bounds )
+#             index_offset = index_interval[0]
+#             index_step = ( index_interval[1] - index_interval[0] ) / float( nticks - 1 )
+#             self.axes_intervals[iaxis] = [ index_interval[0], index_interval[1] ]
+#             
+#         iValIndex = int( index_offset )
+#         for iVal in range( 0, nticks ):            
+#             cval = axis_vals[ iValIndex ]
+#             tvals[iVal] = ( "%.1f" % cval )
+#             iValIndex = int( round( iValIndex + index_step ) )
+#             if iValIndex >= nvals: iValIndex = nvals - 1
+#                        
+#         if ( iaxis == 0 ):
+#             self.axes.set_autoscalex_on( False )
+#             self.axes.set_xticklabels( tvals )
+#             self.axes.set_xticks( tlocs )
+#         else:
+#             self.axes.set_autoscaley_on( False )
+#             self.axes.set_yticklabels( tvals )
+#             self.axes.set_yticks( tlocs )
+
     def setTicks( self, iaxis, nticks, coord_bounds=None ):            
         tvals = [0]*nticks
         tlocs = [0]*nticks     
@@ -161,43 +212,38 @@ class mplSlicePlot(FigureCanvas):
         nvals = len( axis_vals )
         bounds = self.axes.get_xbound() if ( iaxis == 0 ) else self.axes.get_ybound()
         brange = bounds[1] - bounds[0]
-        tstep = brange / ( nticks - 1 ) 
-        invertAxis = ( iaxis == 1 )
-        if axis.isLevel() and hasattr( axis, 'positive' ) :           
-            invertValues = (bounds[0] < bounds[1]) if axis.positive == 'down' else (bounds[1] < bounds[0])
-            if invertValues: invertAxis = not invertAxis
-                   
-        if invertAxis:
-            tlocs[0] = bounds[1]
-            tlocs[nticks-1] = bounds[0]
-            for iTick in range( 1, nticks-1 ):
-                tlocs[iTick] = ( bounds[1] - iTick * tstep ) 
-        else:
-            tlocs[0] = bounds[0]
-            tlocs[nticks-1] = bounds[1]
-            for iTick in range( 1, nticks-1 ):
-                tlocs[iTick] = ( bounds[0] + iTick * tstep ) 
-            
+        tstep = brange / float( nticks-1 ) 
+        invertAxis = ( iaxis == 1 )         
+        if hasattr( axis, 'positive' ) and (bounds[0] < bounds[1]) and ( axis.positive == 'down'):
+            invertAxis = not invertAxis
+                               
         if coord_bounds == None: 
             index_offset = 0
             index_step = nvals / float( nticks - 1 )
             self.axes_intervals[iaxis] = [ 0, nvals ]
+            interval_width = float( nvals - 1 )
         else: 
             if axis.isLongitude() and ( ( coord_bounds[0] < 0.0 ) or ( coord_bounds[1] < 0.0 ) ):
                 coord_bounds[0] = coord_bounds[0] + 360.0
                 coord_bounds[1] = coord_bounds[1] + 360.0
             index_interval = axis.mapIntervalExt( coord_bounds )
             index_offset = index_interval[0]
-            index_step = ( index_interval[1] - index_interval[0] ) / float( nticks - 1 )
+            index_step = int( round( ( index_interval[1] - index_interval[0] ) / float( nticks - 1 ) ) )
             self.axes_intervals[iaxis] = [ index_interval[0], index_interval[1] ]
-            
+            interval_width = float( index_interval[1] - index_interval[0] - 1 )
+        
+        indices = []    
         iValIndex = int( index_offset )
         for iVal in range( 0, nticks ):            
             cval = axis_vals[ iValIndex ]
             tvals[iVal] = ( "%.1f" % cval )
+            rval = ( iValIndex - index_offset ) / interval_width
+            tlocs[iVal] = (bounds[1] - rval * brange)  if invertAxis else ( bounds[0] + rval * brange )  
+            indices.append( iValIndex ) 
             iValIndex = int( round( iValIndex + index_step ) )
             if iValIndex >= nvals: iValIndex = nvals - 1
-                       
+         
+#        print "Set ticks[%d]: %s %s %s " % ( iaxis, str(indices), str(tlocs), str(tvals) )      
         if ( iaxis == 0 ):
             self.axes.set_autoscalex_on( False )
             self.axes.set_xticklabels( tvals )
@@ -238,36 +284,52 @@ class mplSlicePlot(FigureCanvas):
         else:
             self.annotation_box.set_text( textstr )
             
-    def getDisplayPoint( self, data_point, dataPointIndices ):
+#     def getDisplayPoint1( self, data_point, dataPointIndices ):
+#         dpnt = [0,0]
+#         for iaxis in range(2):   
+#             axis = self.xcoord if ( iaxis == 0 ) else self.ycoord
+#             axis_vals = axis.getValue() 
+#             cVal = data_point[ iaxis ]
+#             index_bnds = self.axes_intervals[iaxis]
+#             sub_axis_vals = axis_vals[index_bnds[0]:index_bnds[1]]
+#             nvals = index_bnds[1] - index_bnds[0]
+#             if sub_axis_vals[0] > sub_axis_vals[-1]:
+#                 iVal = np.searchsorted( sub_axis_vals[::-1], cVal )
+#                 iVal = nvals - iVal - 1
+#             else:
+#                 iVal = np.searchsorted( sub_axis_vals, cVal )            
+#             fVal = iVal / float( nvals )
+#             bounds = self.axes.get_xbound() if ( iaxis == 0 ) else self.axes.get_ybound()
+#             brange = bounds[1] - bounds[0]            
+#             dpnt[ iaxis ] = ( bounds[0] + fVal * brange ) if ( iaxis == 0 ) else ( bounds[1] - fVal * brange )
+#         return dpnt 
+
+    def getDisplayPoint( self, dataPointIndices ):
         dpnt = [0,0]
-        for iaxis in range(2):   
-            axis = self.xcoord if ( iaxis == 0 ) else self.ycoord
-            axis_vals = axis.getValue() 
-            cVal = data_point[ iaxis ]
+        for iaxis in range(2): 
+            axis = self.xcoord if ( iaxis == 0 ) else self.ycoord  
             index_bnds = self.axes_intervals[iaxis]
-            sub_axis_vals = axis_vals[index_bnds[0]:index_bnds[1]]
-            nvals = index_bnds[1] - index_bnds[0]
-            if sub_axis_vals[0] > sub_axis_vals[-1]:
-                iVal = np.searchsorted( sub_axis_vals[::-1], cVal )
-                iVal = nvals - iVal - 1
-            else:
-                iVal = np.searchsorted( sub_axis_vals, cVal )            
-            fVal = iVal / float( nvals )
+            axis_vals = axis.getValue() 
+            localIndex = dataPointIndices[ iaxis ] # - index_bnds[0]
+            fVal = localIndex / float( index_bnds[1] - index_bnds[0] -1 )
             bounds = self.axes.get_xbound() if ( iaxis == 0 ) else self.axes.get_ybound()
-            brange = bounds[1] - bounds[0]            
-            dpnt[ iaxis ] = ( bounds[0] + fVal * brange ) if ( iaxis == 0 ) else ( bounds[1] - fVal * brange )
+            brange = bounds[1] - bounds[0] 
+            invertAxis = ( iaxis == 1 ) 
+            if hasattr( axis, 'positive' ) and ( axis.positive == 'down' ) and ( axis_vals[1] > axis_vals[0] ): invertAxis = not invertAxis     
+            if  invertAxis:  dpnt[ iaxis ] = ( bounds[1] - fVal * brange )
+            else:            dpnt[ iaxis ] = ( bounds[0] + fVal * brange )  
         return dpnt 
             
-    def updateCursor( self, data_point, dataPointIndices ):          
+    def updateCursor( self, dataPointIndices ):          
         if self.cursor_plot == None: 
 #                self.axes.hold(True)
             self.cursor_plot = MyCursor( self.axes,  color='red', linewidth=1 ) # useblit=True,
 #                self.axes.hold(False)
 #            cdata = self.axes.transData.transform_point( self.cursor_pos )
-        x, y = self.getDisplayPoint( data_point, dataPointIndices )
+        x, y = self.getDisplayPoint( dataPointIndices )
         mv_event = MoveEvent( self.axes, [ x ], [ y ] )
         self.cursor_plot.onmove( mv_event )
-        print "Update cursor: %.1f, %.1f (%s)" % ( x, y, str(data_point)  ); sys.stdout.flush()
+#        print "Update cursor: %.1f, %.1f (%s)" % ( x, y, str(data_point)  ); sys.stdout.flush()
                 
     def update_figure( self, refresh = True, label=None, **kwargs ):    
         if ( id(self.data) <> id(None) ):
@@ -316,7 +378,7 @@ class mplSlicePlot(FigureCanvas):
         point_annotation = "Probe Point( %.1f, %.1f ) = %s" % ( point[0], point[1], prettyPrintFloat(ptVal) )
         label = '\n'.join([ self.dset_annotation, self.grid_annotation, self.time_annotation, point_annotation ]) 
         self.showAnnotation( label )
-        self.updateCursor( point, pointIndices )
+        self.updateCursor( pointIndices )
         self.axes.figure.canvas.draw_idle()
 #        FigureCanvasAgg.draw(self)
 #        self.repaint()

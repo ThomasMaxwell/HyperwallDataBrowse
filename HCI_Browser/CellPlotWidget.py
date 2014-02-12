@@ -37,7 +37,7 @@ class CellPlotWidget( QtGui.QWidget ):
             self.comm.start()
             
     def processConfigCmd( self, msg ):
-        print " CellPlotWidget: Process Config Cmd: ", str( msg )
+#        print " CellPlotWidget: Process Config Cmd: ", str( msg )
         if msg['type'] == 'Quit': 
             self.terminate()
             self.parent().close()
@@ -149,8 +149,11 @@ if __name__ == "__main__":
 
 #     cfg_data = {'index': 2, 'cmd': 'Moved', 'values': (0.017, 1.7000000000000002), 'type': 'Slider'}
 #     window.wizard.processConfigCmd( cfg_data )
+
+    cfg_data = {'roi': roi, 'type': 'Subset'}
+    window.wizard.processConfigCmd( cfg_data )
     
-    cfg_data = {'type': 'Probe', 'point': [0.5, 0.1 ] }
+    cfg_data = {'type': 'Probe', 'point': [0.5, 0.5 ] }
     window.wizard.processConfigCmd( cfg_data )
     
 #     

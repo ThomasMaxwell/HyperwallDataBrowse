@@ -58,6 +58,7 @@ class DataSlicer( QtCore.QObject ):
             print>>sys.stderr, "Error, illegal axis index: %d " % iAxis
         return axis  
 
+
     def getPoint( self, **args ):
         taxis = self.var.getTime()
         saxes = [ None, None, None ]
@@ -82,25 +83,29 @@ class DataSlicer( QtCore.QObject ):
             avals = axis.getValue()
             saxes[ iAxis ] = axis
             nvals = len( avals )
-            cVal = args.get( axisName, None )
-            if cVal == None:
-                rVal = args.get( "r%s" % axisName, None )
-                if rVal:
-                    if (self.roi == None) or (iAxis==2):
-                        vbnds = [ avals[0], avals[-1] ]
-                    else:
-                        vbnds = [ self.roi[iAxis], self.roi[2+iAxis] ]
+            
+            if (self.roi == None) or (iAxis==2):
+                coord_bounds = [ avals[0], avals[-1] ]
+                index_interval = [ 0, nvals ]
+            else:
+                coord_bounds = [ self.roi[iAxis], self.roi[2+iAxis] ]
+                if axis.isLongitude() and ( ( coord_bounds[0] < 0.0 ) or ( coord_bounds[1] < 0.0 ) ):        
+                    coord_bounds[0] = coord_bounds[0] + 360.0
+                    coord_bounds[1] = coord_bounds[1] + 360.0
+                index_interval = axis.mapIntervalExt( coord_bounds )
                 
-                    cVal = vbnds[0] + rVal * ( vbnds[1] - vbnds[0] )
-            if cVal:
-                if avals[0] > avals[-1]:
-                    iVal = np.searchsorted( avals[::-1], cVal )
-                    iVal = nvals - iVal - 1
+            rVal = args.get( "r%s" % axisName, None )
+            if rVal:   
+                if hasattr( axis, 'positive' ) and ( axis.positive == 'down' ) and ( avals[1] > avals[0] ):
+                    iVal = int( round( index_interval[1] + rVal * ( index_interval[0] - index_interval[1] ) ) )
                 else:
-                    iVal = np.searchsorted( avals, cVal )
+                    iVal = int( round( index_interval[0] + rVal * ( index_interval[1] - index_interval[0] ) ) )
                 iVal = iVal if (iVal < nvals) else ( nvals - 1 )
                 pointCoords[ iAxis ] = avals[ iVal ] 
-                pointIndices[ iAxis ] = iVal
+            else: 
+                iVal = pointIndices[ iAxis ]
+                
+            pointIndices[ iAxis ] = iVal - index_interval[0]
             
         dataCube = None if ( self.dsCacheLevel == CacheLevel.NoCache ) else self.getDataCube( pointIndices[ 3 ] )
         hasDataCube = ( id(dataCube) <> id(None) )
@@ -112,6 +117,64 @@ class DataSlicer( QtCore.QObject ):
             return None
         
         return [ pointCoords[activeCoords[0]], pointCoords[activeCoords[1]] ], [ pointIndices[activeCoords[0]], pointIndices[activeCoords[1]] ], datapoint.squeeze()              
+
+#     def getPoint( self, **args ):
+#         taxis = self.var.getTime()
+#         saxes = [ None, None, None ]
+#         pointIndices = copy.deepcopy( self.currentPosition )
+#         pointCoords = [ 0, 0, 0 ]
+#         rpt = args.get( 'rpt', None )
+#         if rpt:
+#             if self.currentGridAxis==0:
+#                 args[ 'rlat' ] = rpt[0]
+#                 args[ 'rlev' ] = rpt[1]
+#                 activeCoords = [ 1, 2 ]
+#             elif self.currentGridAxis==1:
+#                 args[ 'rlon' ] = rpt[0]
+#                 args[ 'rlev' ] = rpt[1]
+#                 activeCoords = [ 0, 2 ]
+#             elif self.currentGridAxis==2:
+#                 args[ 'rlon' ] = rpt[0]
+#                 args[ 'rlat' ] = rpt[1]
+#                 activeCoords = [ 0, 1 ]
+#         for ( iAxis, axisName ) in enumerate( [ 'lon', 'lat', 'lev'] ):
+#             axis = self.getAxis( iAxis )
+#             avals = axis.getValue()
+#             saxes[ iAxis ] = axis
+#             nvals = len( avals )
+#             cVal = args.get( axisName, None )
+#             if cVal == None:
+#                 rVal = args.get( "r%s" % axisName, None )
+#                 if rVal:
+#                     if (self.roi == None) or (iAxis==2):
+#                         vbnds = [ avals[0], avals[-1] ]
+#                     else:
+#                         vbnds = [ self.roi[iAxis], self.roi[2+iAxis] ]
+#                 
+#                     if hasattr( axis, 'positive' ) and ( axis.positive == 'down' ) and ( vbnds[1] > vbnds[0] ):
+#                         cVal = vbnds[1] + rVal * ( vbnds[0] - vbnds[1] )
+#                     else:
+#                         cVal = vbnds[0] + rVal * ( vbnds[1] - vbnds[0] )
+#             if cVal <> None:
+#                 if avals[0] > avals[-1]:
+#                     iVal = np.searchsorted( avals[::-1], cVal )
+#                     iVal = nvals - iVal - 1
+#                 else:
+#                     iVal = np.searchsorted( avals, cVal )
+#                 iVal = iVal if (iVal < nvals) else ( nvals - 1 )
+#                 pointCoords[ iAxis ] = avals[ iVal ] 
+#                 pointIndices[ iAxis ] = iVal
+#             
+#         dataCube = None if ( self.dsCacheLevel == CacheLevel.NoCache ) else self.getDataCube( pointIndices[ 3 ] )
+#         hasDataCube = ( id(dataCube) <> id(None) )
+#         try:
+#             if hasDataCube:     datapoint = dataCube[ pointIndices[2], pointIndices[1], pointIndices[0] ]
+#             else:               datapoint = self.var( time=taxis[pointIndices[0]], level=saxes[0][pointIndices[1]], latitude=saxes[1][pointIndices[2]], longitude=saxes[2][pointIndices[3]]  )                  
+#         except cdms2.error.CDMSError, err:
+#             print>>sys.stderr, "Error getting point[%s] (%s): %s " % ( str(args), str(pointIndices), str(err) )
+#             return None
+#         
+#         return [ pointCoords[activeCoords[0]], pointCoords[activeCoords[1]] ], [ pointIndices[activeCoords[0]], pointIndices[activeCoords[1]] ], datapoint.squeeze()              
     
     def getSlice( self, iAxis, slider_pos, coord_value ):
         taxis = self.var.getTime()
