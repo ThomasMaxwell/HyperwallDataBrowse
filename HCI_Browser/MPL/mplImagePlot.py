@@ -11,6 +11,7 @@ import sys, os, cdms2, random, time, cdtime, ctypes, traceback
 import numpy as np
 from matplotlib.backends.backend_qt4agg import FigureCanvasAgg, FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure, SubplotParams
+from HCI_Browser.ImageDataSlicer import DataSlicer
 
 _decref = ctypes.pythonapi.Py_DecRef
 _decref.argtypes = [ctypes.py_object]
@@ -121,8 +122,49 @@ class mplSlicePlot(FigureCanvas):
         self.axes_intervals = [ [0,0], [0,0] ]
         self.cursor_plot = None
         self.roi = None
+        self.fig.canvas.mpl_connect( 'button_press_event', self.processMouseClick )
+        self.slicedImageData = None
 #        self.frameEater = FrameEater( self ) 
 #        self.installEventFilter( self.frameEater )
+
+    def processProbe( self, point ):
+        pointCoords, pointIndices, ptVal = self.dataSlicer.getPoint( rpt=point )
+        self.plotPoint( pointCoords, pointIndices, ptVal ) 
+        print " processProbe: %s %s %s "  % ( str(pointCoords), str(pointIndices), str(ptVal) )   
+
+    def processSubset( self, roi ):
+        dataSlice = self.dataSlicer.setRoi( roi )          
+        if id(dataSlice) <> id(None):
+            self.slicedImageData =  dataSlice     
+            self.plotSubset( self.slicedImageData, roi )   
+        print " processSubset: %s "  % ( str(roi) )   
+
+    def positionSlice( self, iAxis, slider_pos, coord_value ):
+        dataSlice = self.dataSlicer.getSlice( iAxis, slider_pos, coord_value )          
+        if id(dataSlice) <> id(None):
+            self.slicedImageData =  dataSlice     
+            self.plotSlice( iAxis, self.slicedImageData, coord_value )   
+
+    def processMouseClick( self, event ):
+        ibutton = event.button
+        pointIndices = [ 0, 0 ]
+        pointCoords = [ 0, 0 ]
+        rCoord = [ 0, 0 ]
+        if ibutton == 1:
+            for iAxis in range(2):
+                dcoord = event.xdata if (iAxis==0) else event.ydata
+                bounds = self.axes.get_xbound() if (iAxis==0) else self.axes.get_ybound()
+                rCoord[iAxis] = ( dcoord - bounds[0] ) / (  bounds[1] - bounds[0] ) 
+                axis = self.xcoord if ( iAxis == 0 ) else self.ycoord
+                axis_vals = axis.getValue() 
+                ainterval = self.axes_intervals[iAxis]
+                pointIndices[iAxis] = ainterval[0] + rCoord[iAxis] * ( ainterval[1] - ainterval[0] )
+                pointCoords[ iAxis ] = axis_vals[ pointIndices[iAxis] ]
+
+            pointCoords1, pointIndices1, ptVal = self.dataSlicer.getPoint( rpt=rCoord )
+            self.plotPoint( pointCoords, pointIndices, ptVal )
+            print " pointCoords1 = %s, pointIndices1 = %s,  pointIndices1 = %s, pointCoords = %s, rCoord=%s " % ( pointCoords1, pointIndices, pointIndices1, pointCoords, rCoord )
+            
               
     def param(self, pname, defval = None ):
         return self.parms.get( pname, defval )
@@ -212,10 +254,8 @@ class mplSlicePlot(FigureCanvas):
         nvals = len( axis_vals )
         bounds = self.axes.get_xbound() if ( iaxis == 0 ) else self.axes.get_ybound()
         brange = bounds[1] - bounds[0]
-        tstep = brange / float( nticks-1 ) 
-        invertAxis = ( iaxis == 1 )         
-        if hasattr( axis, 'positive' ) and (bounds[0] < bounds[1]) and ( axis.positive == 'down'):
-            invertAxis = not invertAxis
+        tstep = brange / float( nticks-1 )     
+        invertAxis = ( hasattr( axis, 'positive' ) and (bounds[0] < bounds[1]) and ( axis.positive == 'down') )
                                
         if coord_bounds == None: 
             index_offset = 0
@@ -280,7 +320,7 @@ class mplSlicePlot(FigureCanvas):
     def showAnnotation( self, textstr ): 
         if self.annotation_box == None:     
             props = dict( boxstyle='round', facecolor='wheat', alpha=0.5 )
-            self.annotation_box = self.axes.text( 0.05, 0.95, textstr, transform=self.fig.transFigure, fontsize=14, verticalalignment='top', bbox=props)
+            self.annotation_box = self.axes.text( 0.82, 0.99, textstr, transform=self.fig.transFigure, fontsize=14, verticalalignment='top', bbox=props)
         else:
             self.annotation_box.set_text( textstr )
             
@@ -338,7 +378,7 @@ class mplSlicePlot(FigureCanvas):
                     self.cursor_plot.disconnect_events()
                     self.cursor_plot = None
                 self.plot = self.axes.imshow( self.data, cmap=self.param('cmap'), norm=self.param('norm'), aspect=self.param('aspect'), interpolation=self.param('interpolation'), alpha=self.param('self.alpha'), vmin=self.vrange[0],
-                            vmax=self.vrange[1], origin=self.param('origin'), extent=self.param('extent'), shape=self.param('shape'), filternorm=self.param('filternorm'), filterrad=self.param('filterrad',4.0),
+                            vmax=self.vrange[1], origin='lower', extent=self.param('extent'), shape=self.param('shape'), filternorm=self.param('filternorm'), filterrad=self.param('filterrad',4.0),
                             imlim=self.param('imlim'), resample=self.param('resample'), url=self.param('url'), **kwargs)
                 if self.roi == None:
                     self.setTicks( 0, 5 )
@@ -367,9 +407,10 @@ class mplSlicePlot(FigureCanvas):
             self.repaint()
             if isQt4: QtGui.qApp.processEvents()   # Workaround Qt bug in v. 4.x
 
-    def setVariable( self, var, dset_title ):
-        self.var = var
-        self.dset_annotation = dset_title
+    def setVariable(self, filepath, varname ):
+        self.dataSlicer = DataSlicer( filepath, varname )
+        self.var = self.dataSlicer.getVariable() 
+        self.dset_annotation = self.dataSlicer.getDatasetTitle() 
         
     def setColormap( self, cmap ):
         self.plot.set_cmap( cmap )

@@ -32,7 +32,12 @@ class DataSlicer( QtCore.QObject ):
         return self.var
     
     def getDatasetTitle(self):
-        return " %s: %s " % ( self.dset.getglobal('id'), self.dset.getglobal('Title') )
+        ds_title = []
+        title = self.dset.getglobal('Title')
+        dsid = self.dset.getglobal('id')
+        if title:   ds_title.append( title ) 
+        if dsid:    ds_title.append( "id = %s" % dsid ) 
+        return "\n".join( ds_title )
     
     def computeIndexIntervals(self):
         for iAxis in range(3):

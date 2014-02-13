@@ -7,8 +7,7 @@ from PyQt4 import QtGui, QtCore
 import sys, os, cdms2
 from Utilities import control_message_signal
 from ColormapManager import ColorMapManager
-from ImageDataSlicer import DataSlicer
-from HCI_Browser.MPL import getCellWidget
+from HCI_Browser.mpl import getCellWidget
 
 
 class PlotLib:
@@ -59,17 +58,14 @@ class CellPlotWidget( QtGui.QWidget ):
 #                sval = float( values[0] ) if values else None
                     
     def processProbe( self, point ):
-        pointCoords, pointIndices, ptVal = self.dataSlicer.getPoint( rpt=point )
-        self.cellWidget.plotPoint( pointCoords, pointIndices, ptVal ) 
-        print " processProbe: %s %s %s "  % ( str(pointCoords), str(pointIndices), str(ptVal) )   
-
+        self.cellWidget.processProbe( point )
+ 
     def processSubset( self, roi ):
-        dataSlice = self.dataSlicer.setRoi( roi )          
-        if id(dataSlice) <> id(None):
-            self.slicedImageData =  dataSlice     
-            self.cellWidget.plotSubset( self.slicedImageData, roi )   
-        print " processSubset: %s "  % ( str(roi) )   
-                               
+        self.cellWidget.processSubset( roi )
+
+    def positionSlice( self, iAxis, slider_pos, coord_value ):
+        self.cellWidget.positionSlice( iAxis, slider_pos, coord_value )
+                              
     def processConfigData( self, config_data ): 
         global_config = config_data.get('global', None )
         if global_config:
@@ -92,16 +88,10 @@ class CellPlotWidget( QtGui.QWidget ):
                     filename = dset_data.get( 'file', None )
                     self.dset_id = dset_data.get( 'id', dset )
                     self.filepath = filename if ( self.dir == None ) else os.path.join( self.dir, filename )
-                    self.dataSlicer = DataSlicer( self.filepath, self.varname )
-                    self.cellWidget.setVariable( self.dataSlicer.getVariable(), self.dataSlicer.getDatasetTitle() )
+                    self.cellWidget.setVariable( self.filepath, self.varname )
                     self.positionSlice( 0, 0.5, 180.0 )
                 else: print>>sys.stderr, "Error, no dataset declared for cell %d " % iproc
 
-    def positionSlice( self, iAxis, slider_pos, coord_value ):
-        dataSlice = self.dataSlicer.getSlice( iAxis, slider_pos, coord_value )          
-        if id(dataSlice) <> id(None):
-            self.slicedImageData =  dataSlice     
-            self.cellWidget.plotSlice( iAxis, self.slicedImageData, coord_value )   
      
     def buildCanvas(self):
         print " buildCanvas "  
@@ -132,7 +122,8 @@ class CellPlotWidgetWindow( QtGui.QMainWindow ):
                 
 if __name__ == "__main__":
     
-    data_dir = '/Developer/Data/AConaty/comp-ECMWF'
+#    data_dir = '/Developer/Data/AConaty/comp-ECMWF'
+    data_dir = '~/data/AConaty/comp-ECMWF'
     data_file = 'ac-comp1-geos5.xml'
     data_var = 'uwnd'
     dsid = 'geos5'
@@ -147,11 +138,11 @@ if __name__ == "__main__":
     cfg_data = {'type': 'Config', 'data': {'c1': {'dv': 'dv1'}, 'global': {'dir': data_dir}, 'dv1': {'name': data_var, 'ds': 'ds1'}, 'ds1': {'id': dsid, 'file': data_file}}}
     window.wizard.processConfigCmd( cfg_data )
 
-#     cfg_data = {'index': 2, 'cmd': 'Moved', 'values': (0.017, 1.7000000000000002), 'type': 'Slider'}
-#     window.wizard.processConfigCmd( cfg_data )
-
-    cfg_data = {'roi': roi, 'type': 'Subset'}
+    cfg_data = {'index': 2, 'cmd': 'Moved', 'values': (0.017, 1.7000000000000002), 'type': 'Slider'}
     window.wizard.processConfigCmd( cfg_data )
+
+#    cfg_data = {'roi': roi, 'type': 'Subset'}
+#    window.wizard.processConfigCmd( cfg_data )
     
     cfg_data = {'type': 'Probe', 'point': [0.5, 0.5 ] }
     window.wizard.processConfigCmd( cfg_data )
