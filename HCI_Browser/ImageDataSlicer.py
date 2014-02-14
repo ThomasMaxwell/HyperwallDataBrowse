@@ -4,7 +4,7 @@ Created on Jan 20, 2014
 @author: tpmaxwel
 '''
 from PyQt4 import QtGui, QtCore
-import cdms2, sys, copy
+import cdms2, sys, copy, traceback
 import numpy as np
 
 class CacheLevel:
@@ -107,11 +107,11 @@ class DataSlicer( QtCore.QObject ):
                 
             rVal = args.get( "r%s" % axisName, None )
             if rVal:   
-                if hasattr( axis, 'positive' ) and ( axis.positive == 'down' ) and ( avals[1] > avals[0] ):
-                    iVal = int( round( index_interval[1] + rVal * ( index_interval[0] - index_interval[1] ) ) )
-                else:
-                    iVal = int( round( index_interval[0] + rVal * ( index_interval[1] - index_interval[0] ) ) )
-                iVal = iVal if (iVal < nvals) else ( nvals - 1 )
+#                if hasattr( axis, 'positive' ) and ( axis.positive == 'down' ) and ( avals[1] > avals[0] ):
+#                    iVal = int( round( index_interval[1] + rVal * ( index_interval[0] - index_interval[1] ) ) )
+#                else:
+                iVal = int( round( index_interval[0] + rVal * ( index_interval[1] - index_interval[0] ) ) )
+                iVal = iVal if  (iVal < index_interval[1] ) else ( index_interval[1] - 1 )
                 pointCoords[ iAxis ] = avals[ iVal ] 
             else: 
                 iVal = pointIndices[ iAxis ]
@@ -121,10 +121,14 @@ class DataSlicer( QtCore.QObject ):
         dataCube = None if ( self.dsCacheLevel == CacheLevel.NoCache ) else self.getDataCube( pointIndices[ 3 ] )
         hasDataCube = ( id(dataCube) <> id(None) )
         try:
-            if hasDataCube:     datapoint = dataCube[ pointIndices[2], pointIndices[1], pointIndices[0] ]
-            else:               datapoint = self.var( time=taxis[pointIndices[0]], level=saxes[0][pointIndices[1]], latitude=saxes[1][pointIndices[2]], longitude=saxes[2][pointIndices[3]]  )                  
-        except cdms2.error.CDMSError, err:
-            print>>sys.stderr, "Error getting point[%s] (%s): %s " % ( str(args), str(pointIndices), str(err) )
+            try:
+                if hasDataCube:     datapoint = dataCube[ pointIndices[2], pointIndices[1], pointIndices[0] ]
+                else:               datapoint = self.var( time=taxis[pointIndices[0]], level=saxes[0][pointIndices[1]], latitude=saxes[1][pointIndices[2]], longitude=saxes[2][pointIndices[3]]  )                  
+            except cdms2.error.CDMSError, err:
+                print>>sys.stderr, "Error getting point[%s] (%s): %s " % ( str(args), str(pointIndices), str(err) )
+                return None
+        except:
+            traceback.print_exc(10)
             return None
         
         return [ pointCoords[activeCoords[0]], pointCoords[activeCoords[1]] ], [ pointIndices[activeCoords[0]], pointIndices[activeCoords[1]] ], datapoint.squeeze()              
@@ -187,47 +191,53 @@ class DataSlicer( QtCore.QObject ):
 #         
 #         return [ pointCoords[activeCoords[0]], pointCoords[activeCoords[1]] ], [ pointIndices[activeCoords[0]], pointIndices[activeCoords[1]] ], datapoint.squeeze()              
     
-    def getSlice( self, iAxis, slider_pos, coord_value ):
+    def getSlice( self, iAxis=None, slider_pos=None, coord_value='NULL' ):
         taxis = self.var.getTime()
+        if iAxis == None: iAxis = self.currentGridAxis
         axis = self.getAxis( iAxis )
         if self.index_interval[0] == None:
             self.computeIndexIntervals()
         if iAxis == 3:
             values = taxis.getValue()
             nvals = len( values )
-            iTime = int ( slider_pos * nvals )
+            iTime = self.currentTime if (slider_pos == None) else int ( slider_pos * nvals )
             if iTime >= nvals: iTime = nvals - 1
             iVal = self.currentSlice
-            if ( iTime == self.currentTime ): return None
+            if ( (iTime == self.currentTime) and (slider_pos <> None)  ): return None
             self.currentPosition[ iAxis ] = iTime
         else:
             values = axis.getValue()
             nvals = len( values )
-            iVal = int ( slider_pos * nvals )
+            iVal = self.currentSlice if (slider_pos == None) else int ( slider_pos * nvals )
             if iVal >= nvals: iVal = nvals - 1
             self.currentPosition[ iAxis ] = iVal
             iTime = self.currentTime
-            if ( iAxis == self.currentGridAxis ) and ( iVal == self.currentSlice ): return None
+            if ( iAxis == self.currentGridAxis ) and ( iVal == self.currentSlice ) and (slider_pos <> None): return None
             if ( iVal > nvals - 1 ): iVal = nvals - 1
         dataCube = None if ( self.dsCacheLevel == CacheLevel.NoCache ) else self.getDataCube( iTime )
         hasDataCube = ( id(dataCube) <> id(None) )
+        aval = axis[iVal]
         try:
-            if    (iAxis == 0) or ( (iAxis == 3) and (self.currentGridAxis == 0) ):   
-                if hasDataCube:             dataslice = dataCube[ :, :, iVal ]
-                elif ( self.roi == None):   dataslice = self.var( time=taxis[iTime], longitude=axis[iVal], order ='zy' )  
-                else:                       dataslice = self.var( time=taxis[iTime], longitude=axis[iVal], latitude=slice(*self.index_interval[1]), order ='zy' )   
-            elif  (iAxis == 1) or ( (iAxis == 3) and (self.currentGridAxis == 1) ):   
-                if hasDataCube:             dataslice = dataCube[ :, iVal, : ]
-                elif ( self.roi == None):   dataslice = self.var( time=taxis[iTime], latitude=axis[iVal], order ='zx'  )                 
-                else:                       dataslice = self.var( time=taxis[iTime], latitude=axis[iVal], longitude=slice(*self.index_interval[0]), order ='zx'  )                 
-            elif  (iAxis == 2) or ( (iAxis == 3) and (self.currentGridAxis == 2) ):   
-                if hasDataCube:             dataslice = dataCube[ iVal, :, : ]
-                elif ( self.roi == None):   dataslice = self.var( time=taxis[iTime], level=axis[iVal], order ='yx'  ) 
-                else:                       dataslice = self.var( time=taxis[iTime], level=axis[iVal], latitude=slice(*self.index_interval[1]), longitude=slice(*self.index_interval[0]), order ='yx'  ) 
-        except cdms2.error.CDMSError, err:
-            print>>sys.stderr, "Error getting slice[%d] (%s): %s " % ( iAxis, str(coord_value), str(err) )
+            try:
+                if    (iAxis == 0) or ( (iAxis == 3) and (self.currentGridAxis == 0) ):   
+                    if hasDataCube:             dataslice = dataCube[ :, :, iVal-self.index_interval[0][0] ]
+                    elif ( self.roi == None):   dataslice = self.var( time=taxis[iTime], longitude=aval, order ='zy' )  
+                    else:                       dataslice = self.var( time=taxis[iTime], longitude=aval, latitude=slice(*self.index_interval[1]), order ='zy' )   
+                elif  (iAxis == 1) or ( (iAxis == 3) and (self.currentGridAxis == 1) ):   
+                    if hasDataCube:             dataslice = dataCube[ :, iVal-self.index_interval[1][0], : ]
+                    elif ( self.roi == None):   dataslice = self.var( time=taxis[iTime], latitude=aval, order ='zx'  )                 
+                    else:                       dataslice = self.var( time=taxis[iTime], latitude=aval, longitude=slice(*self.index_interval[0]), order ='zx'  )                 
+                elif  (iAxis == 2) or ( (iAxis == 3) and (self.currentGridAxis == 2) ):   
+                    if hasDataCube:             dataslice = dataCube[ iVal, :, : ]
+                    elif ( self.roi == None):   dataslice = self.var( time=taxis[iTime], level=aval, order ='yx'  ) 
+                    else:                       dataslice = self.var( time=taxis[iTime], level=aval, latitude=slice(*self.index_interval[1]), longitude=slice(*self.index_interval[0]), order ='yx'  ) 
+            except cdms2.error.CDMSError, err:
+                print>>sys.stderr, "Error getting slice[%d] (%s): %s " % ( iAxis, str(coord_value), str(err) )
+                return None
+        except:
+            traceback.print_exc()
             return None
-        
+            
         if ( iAxis <> 3 ): 
             self.currentGridAxis = iAxis 
         self.currentSlice = iVal 
@@ -240,30 +250,38 @@ class DataSlicer( QtCore.QObject ):
         self.roi = roi
         self.computeIndexIntervals()
         self.timestep_cache = {}
-        taxis = self.var.getTime()
-        iAxis = self.currentGridAxis
-        iVal = self.currentSlice if (iAxis == 2) else 0
-        iTime = self.currentTime
-        axis = self.getAxis( iAxis ) 
-        dataCube = None if ( self.dsCacheLevel == CacheLevel.NoCache ) else self.getDataCube( iTime )
-        hasDataCube = ( id(dataCube) <> id(None) )
-        try:
-            if    (iAxis == 0) or ( (iAxis == 3) and (self.currentGridAxis == 0) ):   
-                if hasDataCube:     dataslice = dataCube[ :, :, iVal ]
-                else:               dataslice = self.var( time=taxis[iTime], longitude=axis[iVal], latitude=slice(*self.index_interval[1]), order ='zy' )                  
-            elif  (iAxis == 1) or ( (iAxis == 3) and (self.currentGridAxis == 1) ):   
-                if hasDataCube:     dataslice = dataCube[ :, iVal, : ]
-                else:               dataslice = self.var( time=taxis[iTime], latitude=axis[iVal], longitude=slice(*self.index_interval[0]), order ='zx'  )                 
-            elif  (iAxis == 2) or ( (iAxis == 3) and (self.currentGridAxis == 2) ):   
-                if hasDataCube:     dataslice = dataCube[ iVal, :, : ]
-                else:               dataslice = self.var( time=taxis[iTime], level=axis[iVal], latitude=slice(*self.index_interval[1]), longitude=slice(*self.index_interval[0]), order ='yx'  ) 
-        except cdms2.error.CDMSError, err:
-            print>>sys.stderr, "Error getting slice[%d]: %s " % ( iAxis, str(err) )
-            return None
+        return self.getSlice()
         
-        self.currentSlice = iVal
-        imageOutput =  dataslice.squeeze()              
-        return imageOutput
+        
+#        
+#        taxis = self.var.getTime()
+#        iAxis = self.currentGridAxis
+#        iVal = self.currentSlice # if (iAxis == 2) else 0
+#        iTime = self.currentTime
+#        axis = self.getAxis( iAxis ) 
+#        dataCube = None if ( self.dsCacheLevel == CacheLevel.NoCache ) else self.getDataCube( iTime )
+#        hasDataCube = ( id(dataCube) <> id(None) )
+#        try:
+#            try:
+#                if    (iAxis == 0) or ( (iAxis == 3) and (self.currentGridAxis == 0) ):   
+#                    if hasDataCube:     dataslice = dataCube[ :, :, iVal-self.index_interval[0][0] ]
+#                    else:               dataslice = self.var( time=taxis[iTime], longitude=axis[iVal], latitude=slice(*self.index_interval[1]), order ='zy' )                  
+#                elif  (iAxis == 1) or ( (iAxis == 3) and (self.currentGridAxis == 1) ):   
+#                    if hasDataCube:     dataslice = dataCube[ :, iVal-self.index_interval[1][0], : ]
+#                    else:               dataslice = self.var( time=taxis[iTime], latitude=axis[iVal], longitude=slice(*self.index_interval[0]), order ='zx'  )                 
+#                elif  (iAxis == 2) or ( (iAxis == 3) and (self.currentGridAxis == 2) ):   
+#                    if hasDataCube:     dataslice = dataCube[ iVal, :, : ]
+#                    else:               dataslice = self.var( time=taxis[iTime], level=axis[iVal], latitude=slice(*self.index_interval[1]), longitude=slice(*self.index_interval[0]), order ='yx'  ) 
+#            except cdms2.error.CDMSError, err:
+#                print>>sys.stderr, "Error getting slice[%d]: %s " % ( iAxis, str(err) )
+#                return None
+#        except Exception, err:
+#            traceback.print_exc()
+#            pass
+#        
+#        self.currentSlice = iVal
+#        imageOutput =  dataslice.squeeze()              
+#        return imageOutput
     
 if __name__ == "__main__":
     

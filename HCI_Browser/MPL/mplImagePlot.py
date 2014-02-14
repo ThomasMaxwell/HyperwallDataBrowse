@@ -130,7 +130,7 @@ class mplSlicePlot(FigureCanvas):
     def processProbe( self, point ):
         pointCoords, pointIndices, ptVal = self.dataSlicer.getPoint( rpt=point )
         self.plotPoint( pointCoords, pointIndices, ptVal ) 
-        print " processProbe: %s %s %s "  % ( str(pointCoords), str(pointIndices), str(ptVal) )   
+        print " processProbe: %s %s %s %s "  % ( point, str(pointCoords), str(pointIndices), str(ptVal) )   
 
     def processSubset( self, roi ):
         dataSlice = self.dataSlicer.setRoi( roi )          
@@ -155,15 +155,15 @@ class mplSlicePlot(FigureCanvas):
                 dcoord = event.xdata if (iAxis==0) else event.ydata
                 bounds = self.axes.get_xbound() if (iAxis==0) else self.axes.get_ybound()
                 rCoord[iAxis] = ( dcoord - bounds[0] ) / (  bounds[1] - bounds[0] ) 
-                axis = self.xcoord if ( iAxis == 0 ) else self.ycoord
-                axis_vals = axis.getValue() 
-                ainterval = self.axes_intervals[iAxis]
-                pointIndices[iAxis] = ainterval[0] + rCoord[iAxis] * ( ainterval[1] - ainterval[0] )
-                pointCoords[ iAxis ] = axis_vals[ pointIndices[iAxis] ]
+#                axis = self.xcoord if ( iAxis == 0 ) else self.ycoord
+#                axis_vals = axis.getValue() 
+#                ainterval = self.axes_intervals[iAxis]
+#                pointIndices[iAxis] = ainterval[0] + rCoord[iAxis] * ( ainterval[1] - ainterval[0] )
+#                pointCoords[ iAxis ] = axis_vals[ pointIndices[iAxis] ]
 
-            pointCoords1, pointIndices1, ptVal = self.dataSlicer.getPoint( rpt=rCoord )
+            pointCoords, pointIndices, ptVal = self.dataSlicer.getPoint( rpt=rCoord )
             self.plotPoint( pointCoords, pointIndices, ptVal )
-            print " pointCoords1 = %s, pointIndices1 = %s,  pointIndices1 = %s, pointCoords = %s, rCoord=%s " % ( pointCoords1, pointIndices, pointIndices1, pointCoords, rCoord )
+            print "  pointIndices = %s, pointCoords = %s, rCoord=%s " % ( pointIndices, pointCoords, rCoord )
             
               
     def param(self, pname, defval = None ):
@@ -255,7 +255,7 @@ class mplSlicePlot(FigureCanvas):
         bounds = self.axes.get_xbound() if ( iaxis == 0 ) else self.axes.get_ybound()
         brange = bounds[1] - bounds[0]
         tstep = brange / float( nticks-1 )     
-        invertAxis = ( hasattr( axis, 'positive' ) and (bounds[0] < bounds[1]) and ( axis.positive == 'down') )
+#        invertAxis = ( hasattr( axis, 'positive' ) and (bounds[0] < bounds[1]) and ( axis.positive == 'down') )
                                
         if coord_bounds == None: 
             index_offset = 0
@@ -266,7 +266,8 @@ class mplSlicePlot(FigureCanvas):
             if axis.isLongitude() and ( ( coord_bounds[0] < 0.0 ) or ( coord_bounds[1] < 0.0 ) ):
                 coord_bounds[0] = coord_bounds[0] + 360.0
                 coord_bounds[1] = coord_bounds[1] + 360.0
-            index_interval = axis.mapIntervalExt( coord_bounds )
+            index_interval = list( axis.mapIntervalExt( coord_bounds ) )
+            index_interval[1] = index_interval[1] + 1
             index_offset = index_interval[0]
             index_step = int( round( ( index_interval[1] - index_interval[0] ) / float( nticks - 1 ) ) )
             self.axes_intervals[iaxis] = [ index_interval[0], index_interval[1] ]
@@ -274,14 +275,15 @@ class mplSlicePlot(FigureCanvas):
         
         indices = []    
         iValIndex = int( index_offset )
+        iValIndexMax = self.axes_intervals[iaxis][1]
         for iVal in range( 0, nticks ):            
             cval = axis_vals[ iValIndex ]
             tvals[iVal] = ( "%.1f" % cval )
             rval = ( iValIndex - index_offset ) / interval_width
-            tlocs[iVal] = (bounds[1] - rval * brange)  if invertAxis else ( bounds[0] + rval * brange )  
+            tlocs[iVal] =  ( bounds[0] + rval * brange )   # (bounds[1] - rval * brange)  if invertAxis else ( bounds[0] + rval * brange )  
             indices.append( iValIndex ) 
             iValIndex = int( round( iValIndex + index_step ) )
-            if iValIndex >= nvals: iValIndex = nvals - 1
+            if iValIndex >= iValIndexMax: iValIndex = iValIndexMax - 1
          
 #        print "Set ticks[%d]: %s %s %s " % ( iaxis, str(indices), str(tlocs), str(tvals) )      
         if ( iaxis == 0 ):
@@ -305,12 +307,14 @@ class mplSlicePlot(FigureCanvas):
         self.axes.set_xlabel( getAxisLabel( self.xcoord ), fontdict=axis_font )
         self.axes.set_ylabel( getAxisLabel( self.ycoord ), fontdict=axis_font )
         
-    def createColorbar( self, **args ):
+    def updateColorbar( self, **args ):
         if self.cbar == None:
             shrink_factor = args.get( 'shrink', 0.5 )
             self.cbar = self.figure.colorbar( self.plot, shrink=shrink_factor ) 
             try: self.cbar.set_label( self.var.units )
             except: pass
+        else:
+            self.cbar.on_mappable_changed( self.plot )
             
     def setZScale( self, zscale ):
         if self.zscale <> zscale:
@@ -349,15 +353,15 @@ class mplSlicePlot(FigureCanvas):
         for iaxis in range(2): 
             axis = self.xcoord if ( iaxis == 0 ) else self.ycoord  
             index_bnds = self.axes_intervals[iaxis]
-            axis_vals = axis.getValue() 
+#            axis_vals = axis.getValue() 
             localIndex = dataPointIndices[ iaxis ] # - index_bnds[0]
             fVal = localIndex / float( index_bnds[1] - index_bnds[0] -1 )
             bounds = self.axes.get_xbound() if ( iaxis == 0 ) else self.axes.get_ybound()
             brange = bounds[1] - bounds[0] 
-            invertAxis = ( iaxis == 1 ) 
-            if hasattr( axis, 'positive' ) and ( axis.positive == 'down' ) and ( axis_vals[1] > axis_vals[0] ): invertAxis = not invertAxis     
-            if  invertAxis:  dpnt[ iaxis ] = ( bounds[1] - fVal * brange )
-            else:            dpnt[ iaxis ] = ( bounds[0] + fVal * brange )  
+#            invertAxis = ( hasattr( axis, 'positive' ) and ( axis.positive == 'down' ) and ( axis_vals[1] > axis_vals[0] ) )    
+#            if  invertAxis:  dpnt[ iaxis ] = ( bounds[1] - fVal * brange )
+#            else:            dpnt[ iaxis ] = ( bounds[0] + fVal * brange )  
+            dpnt[ iaxis ] = ( bounds[0] + fVal * brange )  
         return dpnt 
             
     def updateCursor( self, dataPointIndices ):          
@@ -370,7 +374,15 @@ class mplSlicePlot(FigureCanvas):
         mv_event = MoveEvent( self.axes, [ x ], [ y ] )
         self.cursor_plot.onmove( mv_event )
 #        print "Update cursor: %.1f, %.1f (%s)" % ( x, y, str(data_point)  ); sys.stdout.flush()
-                
+    
+    def getOriginPos(self): 
+        origin_pos = "lower"
+        if ( self.current_plot_index in [ 0, 1 ] ): 
+            lev_axis = self.var.getLevel()
+            if ( hasattr( lev_axis, 'positive' ) and ( lev_axis.positive == 'down' ) ):
+                origin_pos = "upper" 
+        return origin_pos  
+           
     def update_figure( self, refresh = True, label=None, **kwargs ):    
         if ( id(self.data) <> id(None) ):
             if refresh:
@@ -378,7 +390,7 @@ class mplSlicePlot(FigureCanvas):
                     self.cursor_plot.disconnect_events()
                     self.cursor_plot = None
                 self.plot = self.axes.imshow( self.data, cmap=self.param('cmap'), norm=self.param('norm'), aspect=self.param('aspect'), interpolation=self.param('interpolation'), alpha=self.param('self.alpha'), vmin=self.vrange[0],
-                            vmax=self.vrange[1], origin='lower', extent=self.param('extent'), shape=self.param('shape'), filternorm=self.param('filternorm'), filterrad=self.param('filterrad',4.0),
+                            vmax=self.vrange[1], origin=self.getOriginPos(), extent=self.param('extent'), shape=self.param('shape'), filternorm=self.param('filternorm'), filterrad=self.param('filterrad',4.0),
                             imlim=self.param('imlim'), resample=self.param('resample'), url=self.param('url'), **kwargs)
                 if self.roi == None:
                     self.setTicks( 0, 5 )
@@ -395,12 +407,12 @@ class mplSlicePlot(FigureCanvas):
                         self.setTicks( 1, 5, [ self.roi[1], self.roi[3] ]  )
                 self.setTitle()
                 if self.ycoord.isLevel():  self.axes.set_aspect( self.zscale, 'box') 
-                self.createColorbar()
                 self.setAxisLabels()
                 self.annotation_box = None
             else:
                 self.plot.set_array(self.data)
 #            self.updateCursor()
+            self.updateColorbar()
             if label: 
                 self.showAnnotation( label )
             FigureCanvasAgg.draw(self)

@@ -127,7 +127,7 @@ if __name__ == "__main__":
     data_file = 'ac-comp1-geos5.xml'
     data_var = 'uwnd'
     dsid = 'geos5'
-    roi = [-127.6, 6.8, -71.0, 57.2]
+    roi = [ 160, -6, 200, 40 ]
     
     app = QtGui.QApplication( ['Hyperwall Data Browser'] )
 
@@ -141,10 +141,10 @@ if __name__ == "__main__":
     cfg_data = {'index': 2, 'cmd': 'Moved', 'values': (0.017, 1.7000000000000002), 'type': 'Slider'}
     window.wizard.processConfigCmd( cfg_data )
 
-#    cfg_data = {'roi': roi, 'type': 'Subset'}
-#    window.wizard.processConfigCmd( cfg_data )
+    cfg_data = {'roi': roi, 'type': 'Subset'}
+    window.wizard.processConfigCmd( cfg_data )
     
-    cfg_data = {'type': 'Probe', 'point': [0.5, 0.5 ] }
+    cfg_data = {'type': 'Probe', 'point': [0.8, 0.5 ] }
     window.wizard.processConfigCmd( cfg_data )
     
 #     
