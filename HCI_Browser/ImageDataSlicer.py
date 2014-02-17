@@ -138,11 +138,14 @@ class DataSlicer( QtCore.QObject ):
         try:
             try:
                 if compute_timeseries:
-                    tseries = self.var( level=saxes[0][pointIndices[1]], latitude=saxes[1][pointIndices[2]], longitude=saxes[2][pointIndices[3]]  ).squeeze() 
-                    datapoint = tseries[ pointIndices[0] ]
+                    lev_val = saxes[2][pointIndices[2]]
+                    lat_val = saxes[1][pointIndices[1]]
+                    lon_val = saxes[0][pointIndices[0]]
+                    tseries = self.var( level=lev_val, latitude=lat_val, longitude=lon_val  ).squeeze() 
+                    datapoint = tseries[ pointIndices[3] ]
                 else:                   
                     if hasDataCube:     datapoint = dataCube[ pointIndices[2], pointIndices[1], pointIndices[0] ].squeeze()
-                    else:               datapoint = self.var( time=taxis[pointIndices[0]], level=saxes[0][pointIndices[1]], latitude=saxes[1][pointIndices[2]], longitude=saxes[2][pointIndices[3]]  ).squeeze()      
+                    else:               datapoint = self.var( time=taxis[pointIndices[3]], level=saxes[0][pointIndices[2]], latitude=saxes[1][pointIndices[1]], longitude=saxes[2][pointIndices[0]]  ).squeeze()      
             except cdms2.error.CDMSError, err:
                 print>>sys.stderr, "Error getting point[%s] (%s): %s " % ( str(args), str(pointIndices), str(err) )
                 return None

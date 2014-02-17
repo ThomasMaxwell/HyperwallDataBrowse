@@ -90,11 +90,17 @@ class FrameEater( QtCore.QObject):
         self.nPaintEvents = self.nPaintEvents + 1
 
 class mplSlicePlot(FigureCanvas):
+    
+    subPlotRec = [ [0.05, 0.05, 0.3, 0.1 ], [ 0.05, 0.05, 0.9, 0.2 ] ]
+    plotRec    = [ [0.05, 0.05, 0.9, 0.9 ], [ 0.05, 0.30, 0.9, 0.6 ] ]
 
     def __init__(self, parent, *args, **kwargs):
-        self.fig = Figure( subplotpars=SubplotParams(left=0.05, right=0.95, bottom=0.05, top=0.95 ) )
+        self.fig = Figure( subplotpars=SubplotParams(left=0.01, right=0.99, bottom=0.01, top=0.99 ) )
         self.axes = self.fig.add_subplot(111)    
-        self.axes.hold(False)                   # We want the axes cleared every time plot() is called    
+        self.axes.hold(False)                   
+        self.subplotaxes0 = self.fig.add_axes( self.subPlotRec[0] )    
+        self.subplotaxes0.hold(False) 
+        self.update_subplot( False )                  
         self.compute_initial_figure()
         FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
@@ -125,8 +131,17 @@ class mplSlicePlot(FigureCanvas):
         self.cmap = 'jet'
         self.fig.canvas.mpl_connect( 'button_press_event', self.processMouseClick )
         self.slicedImageData = None
+        self.point_plot0 = None
 #        self.frameEater = FrameEater( self ) 
 #        self.installEventFilter( self.frameEater )
+
+    def update_subplot(self, subplot_on ):
+        if subplot_on:
+            self.axes.set_position( self.plotRec[1]) 
+            self.subplotaxes0.set_position( self.subPlotRec[1] )  
+        else:
+            self.axes.set_position( self.plotRec[0] )  
+            self.subplotaxes0.set_position( self.subPlotRec[0] )           
 
     def processProbe( self, point, tseries=False ):
         pointCoords, pointIndices, ptVal, timeseries = self.dataSlicer.getPoint( rpt=point, timeseries=tseries )
@@ -159,12 +174,16 @@ class mplSlicePlot(FigureCanvas):
         plot_tseries = ( ibutton == 1 )
         for iAxis in range(2):
             dcoord = event.xdata if (iAxis==0) else event.ydata
+            if dcoord == None:
+#                self.update_subplot( False ) 
+                return
             bounds = self.axes.get_xbound() if (iAxis==0) else self.axes.get_ybound()
             rCoord[iAxis] = ( dcoord - bounds[0] ) / (  bounds[1] - bounds[0] ) 
+
             
         pointCoords, pointIndices, ptVal, tseries = self.dataSlicer.getPoint( rpt=rCoord, timeseries=plot_tseries )
         self.plotPoint( pointCoords, pointIndices, ptVal )
-        if tseries: self.plotTimeseries( pointCoords, pointIndices, tseries )
+        if id(tseries) <> id(None): self.plotTimeseries( pointCoords, pointIndices, tseries )
 #            print "  pointIndices = %s, pointCoords = %s, rCoord=%s " % ( pointIndices, pointCoords, rCoord )
             
               
@@ -312,6 +331,7 @@ class mplSlicePlot(FigureCanvas):
     def updateColorbar( self, **args ):
         if self.cbar == None:
             shrink_factor = args.get( 'shrink', 0.5 )
+            self.figure.sca( self.axes )
             self.cbar = self.figure.colorbar( self.plot, shrink=shrink_factor ) 
             try: self.cbar.set_label( self.var.units )
             except: pass
@@ -419,9 +439,12 @@ class mplSlicePlot(FigureCanvas):
             if label: 
                 self.showAnnotation( label )
             self.plot.changed()
-            FigureCanvasAgg.draw(self)
-            self.repaint()
-            if isQt4: QtGui.qApp.processEvents()   # Workaround Qt bug in v. 4.x
+            self.repaint_canvas()
+            
+    def repaint_canvas(self):
+        FigureCanvasAgg.draw(self)
+        self.repaint()
+        if isQt4: QtGui.qApp.processEvents()   # Workaround Qt bug in v. 4.x
 
     def setVariable(self, filepath, varname ):
         self.dataSlicer = DataSlicer( filepath, varname )
@@ -441,8 +464,44 @@ class mplSlicePlot(FigureCanvas):
 #        self.repaint()
 #        if isQt4: QtGui.qApp.processEvents()   # Workaround Qt bug in v. 4.x
 
-    def plotTimeseries(self, point, pointIndices, tseries ): 
-        print " PlotTimeseries: npts = %d " % len( tseries )
+    def plotTimeseries(self, point, pointIndices, tseries ):
+#        self.update_subplot(True) 
+        npts = len( tseries )
+#         print " PlotTimeseries: npts = %d: %s " % ( npts, str( [ "%.1f" % tseries[iT] for iT in range( npts ) ] ) )
+        time_axis = self.var.getTime()
+        t = time_axis.getValue()
+        vals = [ tseries[iT] for iT in range( npts ) ] 
+        
+        if self.point_plot0 <> None:
+            self.point_plot0.remove()
+            
+        self.point_plot0 = self.subplotaxes0.plot( t, vals )[0]
+        self.subplotaxes0.figure.canvas.draw_idle()
+
+    def plotTimeseries1(self, point, pointIndices, tseries ): 
+        npts = len( tseries )
+#         print " PlotTimeseries: npts = %d: %s " % ( npts, str( [ "%.1f" % tseries[iT] for iT in range( npts ) ] ) )
+        time_axis = self.var.getTime()
+        t = time_axis.getValue()
+        vals = [ tseries[iT] for iT in range( npts ) ] 
+        
+        if self.point_plot0 == None:
+            self.point_plot0 = self.subplotaxes0.plot( t, vals )[0]
+        else:
+            self.point_plot0.set_data( t, vals )
+            self.subplotaxes0.draw_artist( self.point_plot0 )
+            
+#        self.point_plot0 = self.subplotaxes0.plot( t, vals )[0]
+        self.subplotaxes0.figure.canvas.draw_idle()
+
+#         self.repaint_canvas()
+#         else:
+#             self.point_plot0[0].set_data( t, vals )
+# #            self.repaint_canvas()
+#             self.subplotaxes0.figure.canvas.draw_idle()
+#        self.point_plot0 = self.axes.plot_date( tseries, t, fmt='bo', tz=None, xdate=True, ydate=False )
+        
+        
         
     def plotSlice( self, plot_index, slice_data, coord_value ):
         self.slice_loc[plot_index] = coord_value
