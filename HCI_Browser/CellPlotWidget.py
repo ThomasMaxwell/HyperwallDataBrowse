@@ -44,28 +44,21 @@ class CellPlotWidget( QtGui.QWidget ):
             self.buildCanvas()
             self.processConfigData( msg['data'] )   
         elif msg['type'] == 'Probe': 
-            self.processProbe( msg.get( 'point', None ) )
+            self.cellWidget.processProbe( msg.get( 'point', None ) )
         elif msg['type'] == 'Subset': 
-            self.processSubset( msg.get( 'roi', None ) )
+            self.cellWidget.processSubset( msg.get( 'roi', None ) )
+        elif msg['type'] == 'Color': 
+            self.cellWidget.processColorConfig( msg.get( 'vscale', None ), msg.get( 'cmap', None ) )
         elif msg['type'] == 'Slider': 
             cmd = msg.get( 'cmd', None )
             slice_index = int( msg.get( 'index', -1 ) )
             if cmd == 'Moved':
                 values = msg.get( 'values', None )
-                if values: self.positionSlice( slice_index, values[0], values[1] )
+                if values: self.cellWidget.positionSlice( slice_index, values[0], values[1] )
 #                print " Slider Moved: %s " % str( values )
 #                sys.stdout.flush()
 #                sval = float( values[0] ) if values else None
-                    
-    def processProbe( self, point ):
-        self.cellWidget.processProbe( point )
- 
-    def processSubset( self, roi ):
-        self.cellWidget.processSubset( roi )
-
-    def positionSlice( self, iAxis, slider_pos, coord_value ):
-        self.cellWidget.positionSlice( iAxis, slider_pos, coord_value )
-                              
+                                                   
     def processConfigData( self, config_data ): 
         global_config = config_data.get('global', None )
         if global_config:
@@ -89,7 +82,7 @@ class CellPlotWidget( QtGui.QWidget ):
                     self.dset_id = dset_data.get( 'id', dset )
                     self.filepath = filename if ( self.dir == None ) else os.path.join( self.dir, filename )
                     self.cellWidget.setVariable( self.filepath, self.varname )
-                    self.positionSlice( 0, 0.5, 180.0 )
+                    self.cellWidget.positionSlice( 0, 0.5, 180.0 )
                 else: print>>sys.stderr, "Error, no dataset declared for cell %d " % iproc
 
      
@@ -128,6 +121,8 @@ if __name__ == "__main__":
     data_var = 'uwnd'
     dsid = 'geos5'
     roi = [ 160, -6, 200, 40 ]
+    vscale = [ -20.0, 20.0 ]
+    cmap = 'gist_ncar'
     
     app = QtGui.QApplication( ['Hyperwall Data Browser'] )
 
@@ -143,7 +138,10 @@ if __name__ == "__main__":
 
     cfg_data = {'roi': roi, 'type': 'Subset'}
     window.wizard.processConfigCmd( cfg_data )
-    
+
+    cfg_data = {'vscale': vscale, 'cmap' : cmap, 'type': 'Color'}
+    window.wizard.processConfigCmd( cfg_data )
+       
     cfg_data = {'type': 'Probe', 'point': [0.8, 0.5 ] }
     window.wizard.processConfigCmd( cfg_data )
     

@@ -63,6 +63,19 @@ class DataSlicer( QtCore.QObject ):
             if ( self.dsCacheLevel == CacheLevel.AllTimesteps ):
                 self.timestep_cache[ iTime ] = dataCube 
         return dataCube 
+
+    def getTimeseries( self, iTime ):
+        dataCube = self.timestep_cache.get( iTime, None )
+        if dataCube == None:
+            time_axis = self.var.getTime()
+            if self.roi == None:    
+                dataCube = self.var( time=time_axis[iTime], order ='zyx' )
+            else:
+                dataCube = self.var( time=time_axis[iTime], latitude=slice(*self.index_interval[1]), longitude=slice(*self.index_interval[0]), order ='zyx' )
+            dataCube = dataCube.data.squeeze() 
+            if ( self.dsCacheLevel == CacheLevel.AllTimesteps ):
+                self.timestep_cache[ iTime ] = dataCube 
+        return dataCube 
     
     def getAxis(self, iAxis ):
         axis = None
@@ -85,6 +98,7 @@ class DataSlicer( QtCore.QObject ):
         pointIndices = copy.deepcopy( self.currentPosition )
         pointCoords = [ 0, 0, 0 ]
         rpt = args.get( 'rpt', None )
+        compute_timeseries = args.get( 'timeseries', False )
         if rpt:
             if self.currentGridAxis==0:
                 args[ 'rlat' ] = rpt[0]
@@ -118,12 +132,17 @@ class DataSlicer( QtCore.QObject ):
                 
             pointIndices[ iAxis ] = iVal - index_interval[0]
             
-        dataCube = None if ( self.dsCacheLevel == CacheLevel.NoCache ) else self.getDataCube( pointIndices[ 3 ] )
+        dataCube = None if ( ( self.dsCacheLevel == CacheLevel.NoCache ) or compute_timeseries ) else self.getDataCube( pointIndices[ 3 ] )
         hasDataCube = ( id(dataCube) <> id(None) )
+        tseries = None
         try:
             try:
-                if hasDataCube:     datapoint = dataCube[ pointIndices[2], pointIndices[1], pointIndices[0] ]
-                else:               datapoint = self.var( time=taxis[pointIndices[0]], level=saxes[0][pointIndices[1]], latitude=saxes[1][pointIndices[2]], longitude=saxes[2][pointIndices[3]]  )                  
+                if compute_timeseries:
+                    tseries = self.var( level=saxes[0][pointIndices[1]], latitude=saxes[1][pointIndices[2]], longitude=saxes[2][pointIndices[3]]  ).squeeze() 
+                    datapoint = tseries[ pointIndices[0] ]
+                else:                   
+                    if hasDataCube:     datapoint = dataCube[ pointIndices[2], pointIndices[1], pointIndices[0] ].squeeze()
+                    else:               datapoint = self.var( time=taxis[pointIndices[0]], level=saxes[0][pointIndices[1]], latitude=saxes[1][pointIndices[2]], longitude=saxes[2][pointIndices[3]]  ).squeeze()      
             except cdms2.error.CDMSError, err:
                 print>>sys.stderr, "Error getting point[%s] (%s): %s " % ( str(args), str(pointIndices), str(err) )
                 return None
@@ -131,7 +150,7 @@ class DataSlicer( QtCore.QObject ):
             traceback.print_exc(10)
             return None
         
-        return [ pointCoords[activeCoords[0]], pointCoords[activeCoords[1]] ], [ pointIndices[activeCoords[0]], pointIndices[activeCoords[1]] ], datapoint.squeeze()              
+        return [ pointCoords[activeCoords[0]], pointCoords[activeCoords[1]] ], [ pointIndices[activeCoords[0]], pointIndices[activeCoords[1]] ], datapoint, tseries           
 
 #     def getPoint( self, **args ):
 #         taxis = self.var.getTime()

@@ -122,13 +122,14 @@ class mplSlicePlot(FigureCanvas):
         self.axes_intervals = [ [0,0], [0,0] ]
         self.cursor_plot = None
         self.roi = None
+        self.cmap = 'jet'
         self.fig.canvas.mpl_connect( 'button_press_event', self.processMouseClick )
         self.slicedImageData = None
 #        self.frameEater = FrameEater( self ) 
 #        self.installEventFilter( self.frameEater )
 
-    def processProbe( self, point ):
-        pointCoords, pointIndices, ptVal = self.dataSlicer.getPoint( rpt=point )
+    def processProbe( self, point, tseries=False ):
+        pointCoords, pointIndices, ptVal, timeseries = self.dataSlicer.getPoint( rpt=point, timeseries=tseries )
         self.plotPoint( pointCoords, pointIndices, ptVal ) 
         print " processProbe: %s %s %s %s "  % ( point, str(pointCoords), str(pointIndices), str(ptVal) )   
 
@@ -138,6 +139,11 @@ class mplSlicePlot(FigureCanvas):
             self.slicedImageData =  dataSlice     
             self.plotSubset( self.slicedImageData, roi )   
         print " processSubset: %s "  % ( str(roi) )   
+
+    def processColorConfig( self, vscale = None, cmap = None ):
+        if vscale: self.vrange = vscale
+        if cmap: self.cmap = cmap
+        self.update_figure()
 
     def positionSlice( self, iAxis, slider_pos, coord_value ):
         dataSlice = self.dataSlicer.getSlice( iAxis, slider_pos, coord_value )          
@@ -150,20 +156,16 @@ class mplSlicePlot(FigureCanvas):
         pointIndices = [ 0, 0 ]
         pointCoords = [ 0, 0 ]
         rCoord = [ 0, 0 ]
-        if ibutton == 1:
-            for iAxis in range(2):
-                dcoord = event.xdata if (iAxis==0) else event.ydata
-                bounds = self.axes.get_xbound() if (iAxis==0) else self.axes.get_ybound()
-                rCoord[iAxis] = ( dcoord - bounds[0] ) / (  bounds[1] - bounds[0] ) 
-#                axis = self.xcoord if ( iAxis == 0 ) else self.ycoord
-#                axis_vals = axis.getValue() 
-#                ainterval = self.axes_intervals[iAxis]
-#                pointIndices[iAxis] = ainterval[0] + rCoord[iAxis] * ( ainterval[1] - ainterval[0] )
-#                pointCoords[ iAxis ] = axis_vals[ pointIndices[iAxis] ]
-
-            pointCoords, pointIndices, ptVal = self.dataSlicer.getPoint( rpt=rCoord )
-            self.plotPoint( pointCoords, pointIndices, ptVal )
-            print "  pointIndices = %s, pointCoords = %s, rCoord=%s " % ( pointIndices, pointCoords, rCoord )
+        plot_tseries = ( ibutton == 1 )
+        for iAxis in range(2):
+            dcoord = event.xdata if (iAxis==0) else event.ydata
+            bounds = self.axes.get_xbound() if (iAxis==0) else self.axes.get_ybound()
+            rCoord[iAxis] = ( dcoord - bounds[0] ) / (  bounds[1] - bounds[0] ) 
+            
+        pointCoords, pointIndices, ptVal, tseries = self.dataSlicer.getPoint( rpt=rCoord, timeseries=plot_tseries )
+        self.plotPoint( pointCoords, pointIndices, ptVal )
+        if tseries: self.plotTimeseries( pointCoords, pointIndices, tseries )
+#            print "  pointIndices = %s, pointCoords = %s, rCoord=%s " % ( pointIndices, pointCoords, rCoord )
             
               
     def param(self, pname, defval = None ):
@@ -314,6 +316,7 @@ class mplSlicePlot(FigureCanvas):
             try: self.cbar.set_label( self.var.units )
             except: pass
         else:
+#            print dir(self.plot)
             self.cbar.on_mappable_changed( self.plot )
             
     def setZScale( self, zscale ):
@@ -389,7 +392,7 @@ class mplSlicePlot(FigureCanvas):
                 if self.cursor_plot <> None:
                     self.cursor_plot.disconnect_events()
                     self.cursor_plot = None
-                self.plot = self.axes.imshow( self.data, cmap=self.param('cmap'), norm=self.param('norm'), aspect=self.param('aspect'), interpolation=self.param('interpolation'), alpha=self.param('self.alpha'), vmin=self.vrange[0],
+                self.plot = self.axes.imshow( self.data, cmap=self.cmap, norm=self.param('norm'), aspect=self.param('aspect'), interpolation=self.param('interpolation'), alpha=self.param('self.alpha'), vmin=self.vrange[0],
                             vmax=self.vrange[1], origin=self.getOriginPos(), extent=self.param('extent'), shape=self.param('shape'), filternorm=self.param('filternorm'), filterrad=self.param('filterrad',4.0),
                             imlim=self.param('imlim'), resample=self.param('resample'), url=self.param('url'), **kwargs)
                 if self.roi == None:
@@ -415,6 +418,7 @@ class mplSlicePlot(FigureCanvas):
             self.updateColorbar()
             if label: 
                 self.showAnnotation( label )
+            self.plot.changed()
             FigureCanvasAgg.draw(self)
             self.repaint()
             if isQt4: QtGui.qApp.processEvents()   # Workaround Qt bug in v. 4.x
@@ -436,6 +440,9 @@ class mplSlicePlot(FigureCanvas):
 #        FigureCanvasAgg.draw(self)
 #        self.repaint()
 #        if isQt4: QtGui.qApp.processEvents()   # Workaround Qt bug in v. 4.x
+
+    def plotTimeseries(self, point, pointIndices, tseries ): 
+        print " PlotTimeseries: npts = %d " % len( tseries )
         
     def plotSlice( self, plot_index, slice_data, coord_value ):
         self.slice_loc[plot_index] = coord_value
