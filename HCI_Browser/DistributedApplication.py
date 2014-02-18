@@ -42,8 +42,9 @@ class ConfigFileParser( QtCore.QObject ):
             
     def addField( self, name, value ):
         if self.current_cat == None: self.addCategory( 'global' )
-        vlist = value.split(',')
-        self.current_cat[ name ] = value if isList( vlist ) else [ val.strip() for val in vlist ]  
+#        vlist = value.split(',')
+        self.current_cat[ name ] = value 
+#        print "Add field: %s %s %s " % ( self.current_cat_name, name, value )
         
     def data(self): 
         return self.cats     

@@ -8,7 +8,17 @@ dir = /Developer/Data/AConaty/comp-ECMWF
    name = uwnd
    ds = ds1
 
+[dv2]
+   name = vwnd
+   ds = ds1
+
 [c1]
    dv = dv1
+
+[c2]
+   dv = dv2
+
+[c3]
+   dv = diff( dv1, dv2 )
 
 
