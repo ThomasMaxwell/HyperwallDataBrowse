@@ -44,7 +44,7 @@ class CellPlotWidget( QtGui.QWidget ):
             self.buildCanvas()
             self.processConfigData( msg['data'] )   
         elif msg['type'] == 'Probe': 
-            self.cellWidget.processProbe( msg.get( 'point', None ) )
+            self.cellWidget.processProbe( msg.get( 'point', None ), msg.get( 'button', None ) )
         elif msg['type'] == 'Subset': 
             self.cellWidget.processSubset( msg.get( 'roi', None ) )
         elif msg['type'] == 'Color': 

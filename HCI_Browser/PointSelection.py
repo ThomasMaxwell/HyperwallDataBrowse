@@ -41,7 +41,7 @@ class MousePad( QFrame ):
         p = event.pos()
         s = self.size()
         rpos = [ p.x()/float( s.width() ),  1.0 - p.y()/float( s.height() ) ]; 
-        self.emit( CellButton.selected_signal, rpos )
+        self.emit( CellButton.selected_signal, rpos, event.button()  )
 
     def mousePressEvent( self, event ):
         QFrame.mousePressEvent( self, event )

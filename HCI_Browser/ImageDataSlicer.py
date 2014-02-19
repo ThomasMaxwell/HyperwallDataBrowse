@@ -121,10 +121,10 @@ class DataSlicer( QtCore.QObject ):
                 
             rVal = args.get( "r%s" % axisName, None )
             if rVal:   
-#                if hasattr( axis, 'positive' ) and ( axis.positive == 'down' ) and ( avals[1] > avals[0] ):
-#                    iVal = int( round( index_interval[1] + rVal * ( index_interval[0] - index_interval[1] ) ) )
-#                else:
-                iVal = int( round( index_interval[0] + rVal * ( index_interval[1] - index_interval[0] ) ) )
+                if hasattr( axis, 'positive' ) and ( axis.positive == 'down' ):
+                    iVal = int( round( index_interval[1] + rVal * ( index_interval[0] - index_interval[1] ) ) )
+                else:
+                    iVal = int( round( index_interval[0] + rVal * ( index_interval[1] - index_interval[0] ) ) )
                 iVal = iVal if  (iVal < index_interval[1] ) else ( index_interval[1] - 1 )
                 pointCoords[ iAxis ] = avals[ iVal ] 
             else: 
@@ -137,15 +137,28 @@ class DataSlicer( QtCore.QObject ):
         tseries = None
         try:
             try:
+#                print str( saxes ), str( pointIndices )
                 if compute_timeseries:
-                    lev_val = saxes[2][pointIndices[2]]
-                    lat_val = saxes[1][pointIndices[1]]
-                    lon_val = saxes[0][pointIndices[0]]
+#                     lat_val = saxes[1][pointIndices[1]]
+#                     lon_val = saxes[0][pointIndices[0]]
+#                     lev_axis = saxes[2]
+#                     tseries = self.var( level=saxes[2][pointIndices[2]], latitude=saxes[1][pointIndices[1]], longitude=saxes[0][pointIndices[0]] ).squeeze()  
+#                     nts = len( tseries )
+#                     tindex = pointIndices[3] if ( pointIndices[3] < nts ) else nts - 1
+#                     datapoint = tseries[ tindex ]    
+ 
+                    lon_val = saxes[0][ pointIndices[0] + self.index_interval[0][0] ]
+                    lat_val = saxes[1][ pointIndices[1] + self.index_interval[1][0] ]
+                    lev_axis = saxes[2]
+#                    invert_lev = ( hasattr( lev_axis, 'positive' ) and ( lev_axis.positive == 'down' ) )
+#                    lev_index =  self.index_interval[2][1] - C if invert_lev else pointIndices[2] 
+                    lev_val = lev_axis[ pointIndices[2]  ]
                     tseries = self.var( level=lev_val, latitude=lat_val, longitude=lon_val  ).squeeze() 
                     datapoint = tseries[ pointIndices[3] ]
+                    print "Compute timeseries: pt = [ %.2f, %.2f, %.2f ], ptIndices = %s, lev_index = %d " % ( lon_val, lat_val, lev_val, str(pointIndices), pointIndices[2] )
                 else:                   
                     if hasDataCube:     datapoint = dataCube[ pointIndices[2], pointIndices[1], pointIndices[0] ].squeeze()
-                    else:               datapoint = self.var( time=taxis[pointIndices[3]], level=saxes[0][pointIndices[2]], latitude=saxes[1][pointIndices[1]], longitude=saxes[2][pointIndices[0]]  ).squeeze()      
+                    else:               datapoint = self.var( time=taxis[pointIndices[3]], level=saxes[2][pointIndices[2]], latitude=saxes[1][pointIndices[1]], longitude=saxes[0][pointIndices[0]]  ).squeeze()      
             except cdms2.error.CDMSError, err:
                 print>>sys.stderr, "Error getting point[%s] (%s): %s " % ( str(args), str(pointIndices), str(err) )
                 return None
@@ -212,6 +225,9 @@ class DataSlicer( QtCore.QObject ):
 #             return None
 #         
 #         return [ pointCoords[activeCoords[0]], pointCoords[activeCoords[1]] ], [ pointIndices[activeCoords[0]], pointIndices[activeCoords[1]] ], datapoint.squeeze()              
+
+    def getCurrentPositionIndex( self, iAxis ):
+        return self.currentPosition[ iAxis ]
     
     def getSlice( self, iAxis=None, slider_pos=None, coord_value='NULL' ):
         taxis = self.var.getTime()

@@ -139,11 +139,11 @@ class SliceWidget(QtGui.QWidget):
         layout.addWidget( self.roiSelector )
         self.connect( self.roiSelector, QtCore.SIGNAL('roiSelected'), self.setSelectedROI )
 
-    def setPoint(self, rel_point):
+    def setPoint(self, rel_point, button ):
         self.point = rel_point
         print "Relative Selection Point: ", str( self.point )    
         if self.comm:
-            self.comm.post( { 'type': 'Probe', 'point' : self.point } )
+            self.comm.post( { 'type': 'Probe', 'point' : self.point, 'button' : button } )
 
     def setSelectedROI(self, roi ):
         self.roi = roi
