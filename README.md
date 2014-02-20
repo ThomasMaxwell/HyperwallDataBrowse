@@ -14,4 +14,8 @@ mpiexec -np 2 -hostfile ~/.mpi/hosts python DistributedApplication.py -c ../conf
 
 mpiexec -np 2 -hostfile ~/mpi.hosts python mpiTest.py 
 
+Data Download:
+
+wget -r --ftp-user=visdata --ftp-password= ftp://dataportal.nccs.nasa.gov/pub/MERRA/
+
          
