@@ -114,12 +114,20 @@ class CellPlotWidgetWindow( QtGui.QMainWindow ):
         self.close()
                 
 if __name__ == "__main__":
+    dset = "MERRA"
     
 #    data_dir = '/Developer/Data/AConaty/comp-ECMWF'
-    data_dir = '~/data/AConaty/comp-ECMWF'
-    data_file = 'ac-comp1-geos5.xml'
-    data_var = 'uwnd'
-    dsid = 'geos5'
+    if dset == "GEOS":
+        data_dir = '~/data/AConaty/comp-ECMWF'
+        data_file = 'ac-comp1-geos5.xml'
+        data_var = 'uwnd'
+        dsid = 'geos5'
+    elif dset == "MERRA":
+        data_dir = '~/Data/MERRA'
+        data_file = 'MERRA300.prod.assim.tavg3_3d_qdt_Cp.20131201.hdf.nc'
+        data_var = 'DQVDTMST'
+        dsid = 'merra' 
+        
     roi = [ 160, -6, 200, 40 ]
     vscale = [ -20.0, 20.0 ]
     cmap = 'gist_ncar'
@@ -136,8 +144,8 @@ if __name__ == "__main__":
     cfg_data = {'index': 2, 'cmd': 'Moved', 'values': (0.017, 1.7000000000000002), 'type': 'Slider'}
     window.wizard.processConfigCmd( cfg_data )
 
-    cfg_data = {'roi': roi, 'type': 'Subset'}
-    window.wizard.processConfigCmd( cfg_data )
+#     cfg_data = {'roi': roi, 'type': 'Subset'}
+#     window.wizard.processConfigCmd( cfg_data )
 
     cfg_data = {'vscale': vscale, 'cmap' : cmap, 'type': 'Color'}
     window.wizard.processConfigCmd( cfg_data )

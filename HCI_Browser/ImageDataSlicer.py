@@ -11,6 +11,22 @@ class CacheLevel:
     NoCache = 0
     CurrentTimestep = 1
     AllTimesteps = 2
+
+def isDesignated( axis ):
+    return ( axis.isLatitude() or axis.isLongitude() or axis.isLevel() or axis.isTime() )
+
+def matchesAxisType( axis, axis_attr, axis_aliases ):
+    matches = False
+    aname = axis.id.lower()
+    axis_attribute = axis.attributes.get('axis',None)
+    if axis_attribute and ( axis_attribute.lower() in axis_attr ):
+        matches = True
+    else:
+        for axis_alias in axis_aliases:
+            if ( aname.find( axis_alias ) >= 0): 
+                matches = True
+                break
+    return matches
     
 class DataSlicer( QtCore.QObject ):
     
@@ -27,10 +43,45 @@ class DataSlicer( QtCore.QObject ):
         self.roi = None
         self.currentPosition = [ 0, 0, 0, 0 ]
         self.index_interval = [ None, None, None ]
+        self.designateAxes()
+        
         
     def getVariable(self):
         return self.var
-    
+
+    def designateAxes(self):
+        lev_aliases = [ 'bottom', 'top', 'zdim', 'level', 'height', 'isobaric' ]
+        lev_axis_attr = [ 'z' ]
+        lat_aliases = [ 'north', 'south' ]
+        alt_lat_names = [ 'ydim' ]
+        lat_axis_attr = [ 'y' ]
+        lon_aliases = [ 'east', 'west' ]
+        alt_lon_names = [ 'xdim' ]
+        lon_axis_attr = [ 'x' ]
+        latLonGrid = True
+        for axis in self.var.getAxisList():
+            if not isDesignated( axis ):
+                if matchesAxisType( axis, lev_axis_attr, lev_aliases ):
+                    axis.designateLevel()
+                    print " --> Designating axis %s as a Level axis " % axis.id            
+                elif matchesAxisType( axis, lat_axis_attr, lat_aliases ):
+                    axis.designateLatitude()
+                    print " --> Designating axis %s as a fake Latitude axis " % axis.id 
+                    latLonGrid = False 
+                elif axis.id.lower() in alt_lat_names:
+                    axis.designateLatitude()
+                    print " --> Designating axis %s as a true Latitude axis " % axis.id                                        
+                elif matchesAxisType( axis, lon_axis_attr, lon_aliases ):
+                    axis.designateLongitude()
+                    print " --> Designating axis %s as a fake Longitude axis " % axis.id 
+                    latLonGrid = False 
+                elif axis.id.lower() in alt_lon_names:
+                    axis.designateLongitude()
+                    print " --> Designating axis %s as a true Longitude axis " % axis.id                                        
+            elif ( axis.isLatitude() or axis.isLongitude() ):
+                if ( axis.id.lower()[0] == 'x' ) or ( axis.id.lower()[0] == 'y' ):
+                    latLonGrid = False 
+        return latLonGrid    
     def getDatasetTitle(self):
         ds_title = []
         title = self.dset.getglobal('Title')
