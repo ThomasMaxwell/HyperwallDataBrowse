@@ -173,10 +173,10 @@ class DataSlicer( QtCore.QObject ):
                 
             rVal = args.get( "r%s" % axisName, None )
             if rVal:   
-                if hasattr( axis, 'positive' ) and ( axis.positive == 'down' ):
-                    iVal = int( round( index_interval[1] + rVal * ( index_interval[0] - index_interval[1] ) ) )
-                else:
-                    iVal = int( round( index_interval[0] + rVal * ( index_interval[1] - index_interval[0] ) ) )
+#                 if hasattr( axis, 'positive' ) and ( axis.positive == 'down' ):
+#                     iVal = int( round( index_interval[1] + rVal * ( index_interval[0] - index_interval[1] ) ) )
+#                 else:
+                iVal = int( round( index_interval[0] + rVal * ( index_interval[1] - index_interval[0] ) ) )
                 iVal = iVal if  (iVal < index_interval[1] ) else ( index_interval[1] - 1 )
                 pointCoords[ iAxis ] = avals[ iVal ] 
             else: 

@@ -94,7 +94,7 @@ class FrameEater( QtCore.QObject):
 
 class mplSlicePlot(FigureCanvas):
     
-    subPlotRec = [ [0.05, 0.02, 0.3, 0.1 ], ]
+    subPlotRec = [ [ 0.65, 0.02, 0.3, 0.1 ], ]
     plotRec    = [ [ 0.05, 0.15, 0.9, 0.8 ], ]
 
     def __init__(self, parent, *args, **kwargs):
@@ -173,7 +173,8 @@ class mplSlicePlot(FigureCanvas):
         if id(dataSlice) <> id(None):
             self.slicedImageData =  dataSlice     
             if not self.fixed_datarange:
-                self.vrange = self.dataSlicer.getDataBounds()   
+                self.vrange = self.dataSlicer.getDataBounds() 
+                print "Setting vrange: " , str( self.vrange ) 
             self.plotSlice( iAxis, self.slicedImageData, self.dataSlicer.getCurrentPositionIndex(iAxis), coord_value ) 
 
     def getDataBounds(self):
@@ -425,6 +426,9 @@ class mplSlicePlot(FigureCanvas):
                 if self.cursor_plot <> None:
                     self.cursor_plot.disconnect_events()
                     self.cursor_plot = None
+                if self.plot <> None:
+                    self.plot.remove()
+                    self.plot = None
                 self.plot = self.axes.imshow( self.data, cmap=self.cmap, norm=self.param('norm'), aspect=self.param('aspect'), interpolation=self.param('interpolation'), alpha=self.param('self.alpha'), vmin=self.vrange[0],
                             vmax=self.vrange[1], origin=self.getOriginPos(), extent=self.param('extent'), shape=self.param('shape'), filternorm=self.param('filternorm'), filterrad=self.param('filterrad',4.0),
                             imlim=self.param('imlim'), resample=self.param('resample'), url=self.param('url'), **kwargs)
@@ -447,6 +451,7 @@ class mplSlicePlot(FigureCanvas):
                 self.annotation_box = None
             else:
                 self.plot.set_array(self.data)
+                self.plot.set_clim( self.vrange[0], self.vrange[1] )
 #            self.updateCursor()
             self.updateColorbar()
             if label: 
@@ -496,8 +501,9 @@ class mplSlicePlot(FigureCanvas):
         self.subplotaxes0.set_title("Point timeseries for %s" % ( varname ) )
         self.subplotaxes0.set_xlabel('Time')
         self.subplotaxes0.set_xlabel( self.var.units )
-        xticks = self.subplotaxes0.get_xticks()
-        xtick_labels = [ ( getTimeStr(tcomp[int(xt)]) if (int(xt) < npts) else getTimeStr(tcomp[npts-1]) ) for xt in xticks ]
+        xticks = [ 0, npts/2, npts-1 ]
+        self.subplotaxes0.set_xticks( xticks )
+        xtick_labels = [ getTimeStr(tcomp[int(xt)]) for xt in xticks ]
         self.subplotaxes0.set_xticklabels( xtick_labels)
         self.subplotaxes0.figure.canvas.draw_idle()
 

@@ -146,8 +146,8 @@ if __name__ == "__main__":
     cfg_data = {'type': 'Config', 'data': {'c1': {'dv': 'dv1'}, 'global': {'dir': data_dir}, 'dv1': {'name': data_var, 'ds': 'ds1'}, 'ds1': {'id': dsid, 'file': data_file}}}
     window.wizard.processConfigCmd( cfg_data )
 
-#     cfg_data = {'index': 2, 'cmd': 'Moved', 'values': (0.017, 1.7000000000000002), 'type': 'Slider'}
-#     window.wizard.processConfigCmd( cfg_data )
+    cfg_data = {'index': 2, 'cmd': 'Moved', 'values': (0.017, 1.7000000000000002), 'type': 'Slider'}
+    window.wizard.processConfigCmd( cfg_data )
 
 #     cfg_data = {'roi': roi, 'type': 'Subset'}
 #     window.wizard.processConfigCmd( cfg_data )
