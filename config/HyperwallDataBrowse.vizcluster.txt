@@ -14,64 +14,64 @@ dir = ~/Data/Sandy
 
 [dv1]
    name = U
-   ds = f1025
+   ds = ds1
 
 [dv4]
    name = V
-   ds = f1025
+   ds = ds1
 
 [dv7]
    name = T
-   ds = f1025
+   ds = ds1
 
 [dv10]
    name = RH
-   ds = f1025
+   ds = ds1
 	
 [dv13]
    name = Q
-   ds = f1025
+   ds = ds1
 
 [dv2]
    name = U
-   ds = f1028
+   ds = ds2
 
 [dv5]
    name = V
-   ds = f1028
+   ds = ds2
 
 [dv8]
    name = T
-   ds = f1028
+   ds = ds2
 
 [dv11]
 	name = RH
-	ds = f1028
+	ds = ds2
 
 [dv14]
 	name = Q
-	ds = f1028
+	ds = ds2
 
 [dv3]
    name = U
-   ds = ana
+   ds = ds3
 
 [dv6]
    name = V
-   ds = ana
+   ds = ds3
 
 
 [dv9]
    name = T
-   ds = ana
+   ds = ds3
 
 [dv12]
    name = RH
-   ds = ana
+   ds = ds3
 
 [dv15]
    name = Q
-   ds = ana
+   ds = ds3
 
 [c1]
    dv = dv1
