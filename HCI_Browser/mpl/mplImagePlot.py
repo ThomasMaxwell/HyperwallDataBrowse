@@ -23,6 +23,9 @@ progname = "Hyperwall Cell Plot"
 qtversion = str( QtCore.qVersion() )
 isQt4 = ( qtversion[0] == '4' )
 
+def getTimeStr( comptime ):
+    return "%d:%d:%d:%d" % ( comptime.month, comptime.day, comptime.hour, comptime.minute )
+
 class MyCursor( Cursor ):
     
     def __init__( self, axes, **args ):
@@ -91,18 +94,18 @@ class FrameEater( QtCore.QObject):
 
 class mplSlicePlot(FigureCanvas):
     
-    subPlotRec = [ [0.05, 0.02, 0.3, 0.1 ], [ 0.05, 0.05, 0.9, 0.2 ] ]
-    plotRec    = [ [0.0, 0.0, 1.0, 1.0 ], [0.05, 0.05, 0.9, 0.9 ], [ 0.05, 0.30, 0.9, 0.6 ] ]
+    subPlotRec = [ [0.05, 0.02, 0.3, 0.1 ], ]
+    plotRec    = [ [ 0.05, 0.15, 0.9, 0.8 ], ]
 
     def __init__(self, parent, *args, **kwargs):
         self.fig = Figure( ) # subplotpars=SubplotParams(left=0.01, right=0.99, bottom=0.01, top=0.99 ) )
-        self.axes = self.fig.add_subplot(111)    
+        FigureCanvas.__init__(self, self.fig)
+        self.axes = self.fig.add_axes( self.plotRec[0] )   
         self.axes.hold(False)                   
         self.subplotaxes0 = self.fig.add_axes( self.subPlotRec[0] )    
         self.subplotaxes0.hold(False) 
-        self.update_subplot( False )                  
+#        self.update_subplot( False )                  
         self.compute_initial_figure()
-        FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
         FigureCanvas.setSizePolicy(self, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
@@ -136,13 +139,13 @@ class mplSlicePlot(FigureCanvas):
 #        self.frameEater = FrameEater( self ) 
 #        self.installEventFilter( self.frameEater )
 
-    def update_subplot(self, subplot_on ):
-        if subplot_on:
-            self.axes.set_position( self.plotRec[1]) 
-            self.subplotaxes0.set_position( self.subPlotRec[1] )  
-        else:
-            self.axes.set_position( self.plotRec[0] )  
-            self.subplotaxes0.set_position( self.subPlotRec[0] )           
+#     def update_subplot(self, subplot_on ):
+#         if subplot_on:
+#             self.axes.set_position( self.plotRec[1]) 
+#             self.subplotaxes0.set_position( self.subPlotRec[1] )  
+#         else:
+#             self.axes.set_position( self.plotRec[0] )  
+#             self.subplotaxes0.set_position( self.subPlotRec[0] )           
 
     def processProbe( self, point, button=None ):
         plot_tseries = ( button == 1 )
@@ -357,7 +360,7 @@ class mplSlicePlot(FigureCanvas):
     def showAnnotation( self, textstr ): 
         if self.annotation_box == None:     
             props = dict( boxstyle='round', facecolor='wheat', alpha=0.5 )
-            self.annotation_box = self.axes.text( 0.82, 0.99, textstr, transform=self.fig.transFigure, fontsize=14, verticalalignment='top', bbox=props)
+            self.annotation_box = self.axes.text( 0.78, 0.99, textstr, transform=self.fig.transFigure, fontsize=14, verticalalignment='top', bbox=props)
         else:
             self.annotation_box.set_text( textstr )
             
@@ -410,10 +413,10 @@ class mplSlicePlot(FigureCanvas):
     
     def getOriginPos(self): 
         origin_pos = "lower"
-        if ( self.current_plot_index in [ 0, 1 ] ): 
-            lev_axis = self.var.getLevel()
-            if ( hasattr( lev_axis, 'positive' ) and ( lev_axis.positive == 'down' ) ):
-                origin_pos = "upper" 
+#         if ( self.current_plot_index in [ 0, 1 ] ): 
+#             lev_axis = self.var.getLevel()
+#             if ( hasattr( lev_axis, 'positive' ) and ( lev_axis.positive == 'down' ) ):
+#                 origin_pos = "upper" 
         return origin_pos  
            
     def update_figure( self, refresh = True, label=None, **kwargs ):    
@@ -494,7 +497,7 @@ class mplSlicePlot(FigureCanvas):
         self.subplotaxes0.set_xlabel('Time')
         self.subplotaxes0.set_xlabel( self.var.units )
         xticks = self.subplotaxes0.get_xticks()
-        xtick_labels = [ ( str(tcomp[int(xt)]) if (int(xt) < npts) else str(tcomp[npts-1]) ) for xt in xticks ]
+        xtick_labels = [ ( getTimeStr(tcomp[int(xt)]) if (int(xt) < npts) else getTimeStr(tcomp[npts-1]) ) for xt in xticks ]
         self.subplotaxes0.set_xticklabels( xtick_labels)
         self.subplotaxes0.figure.canvas.draw_idle()
 
