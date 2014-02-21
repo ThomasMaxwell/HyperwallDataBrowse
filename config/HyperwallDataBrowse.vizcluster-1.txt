@@ -1,0 +1,135 @@
+dir = ~/Data/MERRA
+
+[ds1]
+   id = asm_Cp
+   file = MERRA300.prod.assim.inst3_3d_asm_Cp.20131201.hdf.nc
+
+[ds2]
+   id = ana_Np
+   file = MERRA300.prod.assim.inst6_3d_ana_Np.20131201.hdf.nc 
+
+[ds3]
+   id = ana_Nv
+   file = MERRA300.prod.assim.inst6_3d_ana_Nv.20131201.hdf.nc
+
+[ds4]
+   id = cld_Cp
+   file = MERRA300.prod.assim.tavg3_3d_cld_Cp.20131201.hdf.nc
+
+[ds5]
+   id = mst_Cp
+   file = MERRA300.prod.assim.tavg3_3d_mst_Cp.20131201.hdf.nc
+
+[ds6]
+   id = qdt_Cp
+   file = MERRA300.prod.assim.tavg3_3d_qdt_Cp.20131201.hdf.nc
+
+[dv1]
+   name = DQVDTMST
+   ds = ds6
+
+[dv4]
+   name = DQVDTTRB
+   ds = ds6
+
+[dv7]
+   name = DQVDTDYN
+   ds = ds6
+
+[dv10]
+   name = DQRCU
+   ds = ds5
+	
+[dv13]
+   name = PFLCU
+   ds = ds5
+
+[dv2]
+   name = DQIDTMST
+   ds = ds6
+
+[dv5]
+   name = DQIDTTRB
+   ds = ds6
+
+[dv8]
+   name = DQIDTDYN
+   ds = ds6
+
+[dv11]
+	name = DQRLSAN
+	ds = ds5
+
+[dv14]
+	name = PFLLSAN
+	ds = ds5
+
+[dv3]
+   name = DQLDTMST
+   ds = ds6
+
+[dv6]
+   name = DQLDTTRB
+   ds = ds6
+
+
+[dv9]
+   name = DQLDTDYN
+   ds = ds6
+
+[dv12]
+   name = REEVAPCN
+   ds = ds5
+
+[dv15]
+   name = REEVAPLSAN
+   ds = ds5
+
+
+[c1]
+   dv = dv1
+   
+[c2]
+   dv = dv2
+
+[c3]
+   dv = dv3
+   
+[c4]
+   dv = dv4
+   
+[c5]
+   dv = dv5
+
+[c6]
+   dv = dv6
+   
+[c7]
+   dv = dv7
+   
+[c8]
+   dv = dv8
+
+[c9]
+   dv = dv9
+   
+[c10]
+   dv = dv10
+   
+[c11]
+   dv = dv11
+
+[c12]
+   dv = dv12
+
+[c13]
+   dv = dv13
+   
+[c14]
+   dv = dv14
+
+[c15]
+   dv = dv15
+   
+
+
