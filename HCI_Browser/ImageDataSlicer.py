@@ -44,6 +44,7 @@ class DataSlicer( QtCore.QObject ):
         self.currentPosition = [ 0, 0, 0, 0 ]
         self.index_interval = [ None, None, None ]
         self.designateAxes()
+        self.data_bounds = None
         
         
     def getVariable(self):
@@ -331,9 +332,14 @@ class DataSlicer( QtCore.QObject ):
             self.currentGridAxis = iAxis 
         self.currentSlice = iVal 
         self.currentTime = iTime
-        imageOutput =  dataslice.squeeze() 
-             
+        missing_value = self.var.missing_value if hasattr( self.var, 'missing_value' ) else None
+        if missing_value <> None: dataslice = np.ma.masked_equal( dataslice, missing_value, False )
+        self.data_bounds = [ np.ma.amin( dataslice ), np.ma.amax( dataslice ) ]
+        imageOutput =  dataslice.squeeze()             
         return imageOutput
+    
+    def getDataBounds(self):
+        return self.data_bounds
 
     def setRoi( self, roi ):
         self.roi = roi

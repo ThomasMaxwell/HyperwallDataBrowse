@@ -114,7 +114,7 @@ class CellPlotWidgetWindow( QtGui.QMainWindow ):
         self.close()
                 
 if __name__ == "__main__":
-    dset = "MERRA"
+    dset = "Sandy"
     
 #    data_dir = '/Developer/Data/AConaty/comp-ECMWF'
     if dset == "GEOS":
@@ -127,6 +127,11 @@ if __name__ == "__main__":
         data_file = 'MERRA300.prod.assim.tavg3_3d_qdt_Cp.20131201.hdf.nc'
         data_var = 'DQVDTMST'
         dsid = 'merra' 
+    elif dset == "Sandy":
+        data_dir = '~/Data/Sandy'
+        data_file = 'forecast/f1025/Sandy_subset.xml'
+        data_var = 'U'
+        dsid = 'sandy' 
         
     roi = [ 160, -6, 200, 40 ]
     vscale = [ -20.0, 20.0 ]
@@ -147,11 +152,11 @@ if __name__ == "__main__":
 #     cfg_data = {'roi': roi, 'type': 'Subset'}
 #     window.wizard.processConfigCmd( cfg_data )
 
-    cfg_data = {'vscale': vscale, 'cmap' : cmap, 'type': 'Color'}
-    window.wizard.processConfigCmd( cfg_data )
+#    cfg_data = {'vscale': vscale, 'cmap' : cmap, 'type': 'Color'}
+#    window.wizard.processConfigCmd( cfg_data )
        
-    cfg_data = {'type': 'Probe', 'point': [0.8, 0.5 ] }
-    window.wizard.processConfigCmd( cfg_data )
+#    cfg_data = {'type': 'Probe', 'point': [0.8, 0.5 ] }
+#    window.wizard.processConfigCmd( cfg_data )
     
 #     
 #     cfg_data = {'roi': roi, 'type': 'Subset'}

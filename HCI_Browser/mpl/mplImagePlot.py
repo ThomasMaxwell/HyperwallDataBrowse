@@ -166,7 +166,12 @@ class mplSlicePlot(FigureCanvas):
         dataSlice = self.dataSlicer.getSlice( iAxis, slider_pos, coord_value )          
         if id(dataSlice) <> id(None):
             self.slicedImageData =  dataSlice     
-            self.plotSlice( iAxis, self.slicedImageData, self.dataSlicer.getCurrentPositionIndex(iAxis), coord_value )   
+            self.plotSlice( iAxis, self.slicedImageData, self.dataSlicer.getCurrentPositionIndex(iAxis), coord_value ) 
+            if self.vrange[0] == None:
+                self.vrange = self.dataSlicer.getDataBounds()   
+
+    def getDataBounds(self):
+        return self.dataSlicer.getDataBounds()
 
     def processMouseClick( self, event ):
         ibutton = event.button
