@@ -127,6 +127,7 @@ class mplSlicePlot(FigureCanvas):
         self.cursor_pos = [ 0.0, 0.0 ]
         self.axes_intervals = [ [0,0], [0,0] ]
         self.cursor_plot = None
+        self.fixed_datarange = False
         self.roi = None
         self.cmap = 'jet'
         self.fig.canvas.mpl_connect( 'button_press_event', self.processMouseClick )
@@ -158,7 +159,9 @@ class mplSlicePlot(FigureCanvas):
         print " processSubset: %s "  % ( str(roi) )   
 
     def processColorConfig( self, vscale = None, cmap = None ):
-        if vscale: self.vrange = vscale
+        if vscale: 
+            self.vrange = vscale
+            self.fixed_datarange = True
         if cmap: self.cmap = cmap
         self.update_figure()
 
@@ -166,9 +169,9 @@ class mplSlicePlot(FigureCanvas):
         dataSlice = self.dataSlicer.getSlice( iAxis, slider_pos, coord_value )          
         if id(dataSlice) <> id(None):
             self.slicedImageData =  dataSlice     
-            self.plotSlice( iAxis, self.slicedImageData, self.dataSlicer.getCurrentPositionIndex(iAxis), coord_value ) 
-            if self.vrange[0] == None:
+            if not self.fixed_datarange:
                 self.vrange = self.dataSlicer.getDataBounds()   
+            self.plotSlice( iAxis, self.slicedImageData, self.dataSlicer.getCurrentPositionIndex(iAxis), coord_value ) 
 
     def getDataBounds(self):
         return self.dataSlicer.getDataBounds()
